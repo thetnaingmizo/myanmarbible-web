@@ -622,6 +622,7 @@ returns table (
   similarity float
 )
 language sql stable
+set search_path = extensions, public
 as $$
   select
     v.id as verse_id,
