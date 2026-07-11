@@ -12,8 +12,14 @@
 export interface TranslationSource {
   /** Short code stored in DB (translations.code) */
   code: string;
-  /** eBible.org translation id used in download URLs */
+  /** eBible.org translation id used in download URLs ("" for local sources) */
   ebibleId: string;
+  /**
+   * Local SQLite source instead of an eBible download. `file` is relative to
+   * scripts/seed-bible/; `table` must have columns
+   * (id, type, book, chapter, verse, text) — see parse-local-sqlite.ts.
+   */
+  localSqlite?: { file: string; table: string };
   /** English display name */
   nameEn: string;
   /** Myanmar display name */
@@ -48,6 +54,17 @@ export const TRANSLATIONS: TranslationSource[] = [
     isDefault: false,
     licenseInfo: "Public Domain",
     sourceUrl: "https://ebible.org/find/details.php?id=eng-kjv2006",
+  },
+  {
+    code: "mizo",
+    ebibleId: "",
+    localSqlite: { file: "sources/mizogobible.db", table: "mizogobible" },
+    nameEn: "Mizo Bible",
+    nameMy: null,
+    language: "lus",
+    isDefault: false,
+    licenseInfo: "Source provided by the app owner",
+    sourceUrl: "",
   },
 ];
 

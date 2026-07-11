@@ -23,10 +23,15 @@
  * It uses upsert (ON CONFLICT) so existing data is updated, not duplicated.
  */
 
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { TRANSLATIONS, type TranslationSource } from "./config.js";
 import { downloadAndExtractUsfx } from "./download.js";
+import { parseLocalSqlite } from "./parse-local-sqlite.js";
 import { parseUsfxFile } from "./parse-usfx.js";
 import { seedTranslation } from "./seed.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ---------------------------------------------------------------------------
 // Load .env.local (so scripts work outside of Next.js)
@@ -121,13 +126,24 @@ async function main(): Promise<void> {
   for (const translation of translations) {
     console.log(`--- ${translation.nameEn} (${translation.code}) ---`);
 
-    // Step 1: Download
-    console.log("\n[1/3] Downloading USFX from eBible.org...");
-    const xmlPath = await downloadAndExtractUsfx(translation);
+    let parseResult;
+    if (translation.localSqlite) {
+      // Local SQLite source (e.g. the Mizo Bible) — nothing to download.
+      console.log("\n[1/3] Local SQLite source, no download needed.");
+      console.log("\n[2/3] Parsing local SQLite database...");
+      parseResult = parseLocalSqlite(
+        path.join(__dirname, translation.localSqlite.file),
+        translation.localSqlite.table
+      );
+    } else {
+      // Step 1: Download
+      console.log("\n[1/3] Downloading USFX from eBible.org...");
+      const xmlPath = await downloadAndExtractUsfx(translation);
 
-    // Step 2: Parse
-    console.log("\n[2/3] Parsing USFX XML...");
-    const parseResult = await parseUsfxFile(xmlPath);
+      // Step 2: Parse
+      console.log("\n[2/3] Parsing USFX XML...");
+      parseResult = await parseUsfxFile(xmlPath);
+    }
 
     // Step 3: Seed DB
     if (options.downloadOnly) {
