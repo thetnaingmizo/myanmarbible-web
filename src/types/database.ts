@@ -835,6 +835,85 @@ export type Database = {
           },
         ]
       }
+      verse_feedback: {
+        Row: {
+          admin_note: string | null
+          book_name: string
+          book_number: number
+          chapter_number: number
+          comment: string | null
+          created_at: string
+          id: string
+          original_text: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["feedback_status"]
+          suggested_text: string | null
+          translation_code: string
+          user_id: string | null
+          verse_id: string | null
+          verse_number: number
+        }
+        Insert: {
+          admin_note?: string | null
+          book_name: string
+          book_number: number
+          chapter_number: number
+          comment?: string | null
+          created_at?: string
+          id?: string
+          original_text: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          suggested_text?: string | null
+          translation_code: string
+          user_id?: string | null
+          verse_id?: string | null
+          verse_number: number
+        }
+        Update: {
+          admin_note?: string | null
+          book_name?: string
+          book_number?: number
+          chapter_number?: number
+          comment?: string | null
+          created_at?: string
+          id?: string
+          original_text?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["feedback_status"]
+          suggested_text?: string | null
+          translation_code?: string
+          user_id?: string | null
+          verse_id?: string | null
+          verse_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verse_feedback_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verse_feedback_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verse_feedback_verse_id_fkey"
+            columns: ["verse_id"]
+            isOneToOne: false
+            referencedRelation: "verses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       verses: {
         Row: {
           book_id: string
@@ -843,6 +922,7 @@ export type Database = {
           id: string
           text: string
           text_search: unknown
+          updated_at: string
           verse_number: number
         }
         Insert: {
@@ -852,6 +932,7 @@ export type Database = {
           id?: string
           text: string
           text_search?: unknown
+          updated_at?: string
           verse_number: number
         }
         Update: {
@@ -861,6 +942,7 @@ export type Database = {
           id?: string
           text?: string
           text_search?: unknown
+          updated_at?: string
           verse_number?: number
         }
         Relationships: [
@@ -897,6 +979,7 @@ export type Database = {
     Enums: {
       content_status: "draft" | "published" | "archived"
       difficulty_level: "easy" | "medium" | "hard"
+      feedback_status: "pending" | "applied" | "rejected"
       message_role: "user" | "assistant" | "system"
       question_status: "pending" | "approved" | "rejected"
       user_role: "user" | "admin"
@@ -1032,6 +1115,7 @@ export const Constants = {
     Enums: {
       content_status: ["draft", "published", "archived"],
       difficulty_level: ["easy", "medium", "hard"],
+      feedback_status: ["pending", "applied", "rejected"],
       message_role: ["user", "assistant", "system"],
       question_status: ["pending", "approved", "rejected"],
       user_role: ["user", "admin"],
