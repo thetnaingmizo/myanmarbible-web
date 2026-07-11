@@ -1,0 +1,42 @@
+name: Deploy Dev
+
+on:
+  push:
+    branches: [deploy/dev]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Pull Vercel environment (preview)
+        run: npx vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build (preview target)
+        run: npx vercel build --target=preview --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy prebuilt (preview target)
+        id: deploy
+        run: |
+          url=$(npx vercel deploy --prebuilt --target=preview --token=${{ secrets.VERCEL_TOKEN }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Alias to dev domain
+        run: npx vercel alias set ${{ steps.deploy.outputs.url }} myanmarbible-dev.antaresbyte.com --token=${{ secrets.VERCEL_TOKEN }}
