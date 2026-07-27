@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Geist, Geist_Mono, Padauk } from "next/font/google";
+import { Geist, Geist_Mono, Noto_Sans_Myanmar } from "next/font/google";
 import { getLocale } from "next-intl/server";
+import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +15,9 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const padauk = Padauk({
-  variable: "--font-padauk",
-  weight: ["400", "700"],
+const notoSansMyanmar = Noto_Sans_Myanmar({
+  variable: "--font-myanmar",
+  weight: ["400", "500", "600", "700"],
   subsets: ["myanmar"],
   display: "swap",
 });
@@ -40,9 +41,11 @@ export default async function RootLayout({ children }: Props) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${padauk.variable} font-sans antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${notoSansMyanmar.variable} font-sans antialiased`}
       >
-        {children}
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

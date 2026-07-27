@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { LanguageSwitcher } from "./language-switcher";
+import { ThemeToggle } from "./theme-toggle";
 import { MobileNav } from "./mobile-nav";
 import { UserMenu } from "./user-menu";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,10 @@ export function HeaderClient({ user }: Props) {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
-        <Link href="/" className="mr-6 text-lg font-bold">
+        <Link
+          href="/"
+          className="mr-4 min-w-0 shrink truncate text-base font-bold leading-tight sm:mr-6 sm:text-lg"
+        >
           {t("appName")}
         </Link>
 
@@ -53,6 +57,7 @@ export function HeaderClient({ user }: Props) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+          <ThemeToggle />
           <LanguageSwitcher />
           {user ? (
             <UserMenu user={user} />

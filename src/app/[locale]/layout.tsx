@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -26,7 +27,13 @@ export default async function LocaleLayout({ children, params }: Props) {
   return (
     <NextIntlClientProvider>
       <div className="flex min-h-screen flex-col">
-        <Header />
+        <Suspense
+          fallback={
+            <header className="sticky top-0 z-50 h-14 w-full border-b bg-background/95" />
+          }
+        >
+          <Header />
+        </Suspense>
         <main className="flex-1">{children}</main>
         <Footer />
       </div>

@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 
 export function Footer() {
   const t = useTranslations("Common");
@@ -10,12 +11,12 @@ export function Footer() {
           &copy; {new Date().getFullYear()} {t("appName")}
         </p>
         <nav className="flex gap-4 text-sm text-muted-foreground">
-          <a href="#" className="hover:underline">
-            Privacy
-          </a>
-          <a href="#" className="hover:underline">
-            Terms
-          </a>
+          <Link href="/privacy" className="hover:underline">
+            {t("privacy")}
+          </Link>
+          <Link href="/terms" className="hover:underline">
+            {t("terms")}
+          </Link>
         </nav>
       </div>
     </footer>
