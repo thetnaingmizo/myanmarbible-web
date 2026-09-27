@@ -1,6 +1,7 @@
 // AI Bible assistant for the app and the website (Server-Sent Events).
 //
-// POST { message, translationId, lang: "my" | "en", conversationId? }
+// POST { message, translationId, lang: "my" | "en", conversationId?, mode? }
+// mode "verses": semantic verse search only (topic results) — no answer, no quota.
 // with the user's JWT (guests included).
 //
 // Order of work, cheapest first:
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
   const user = auth?.user;
   if (authError || !user) return json({ error: "unauthorized" }, 401);
 
-  let body: { message?: string; translationId?: string; lang?: string; conversationId?: string };
+  let body: { message?: string; translationId?: string; lang?: string; conversationId?: string; mode?: string };
   try {
     body = await req.json();
   } catch {
@@ -110,6 +111,27 @@ Deno.serve(async (req) => {
 
     // 2. Crisis: a fixed, caring answer — never generated, never counted.
     if (isCrisis(message)) return sse(async (send) => send("crisis", { message: crisisMessage(lang) }));
+
+    // Topic search: verses only. One embedding (~$0.000002), no quota; the
+    // app shows the real verse text from its own database.
+    if (body.mode === "verses") {
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      const emb = await ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: message.replace(/\u200B/g, ""),
+        config: { outputDimensionality: 768, taskType: "RETRIEVAL_QUERY" },
+      });
+      const vector = emb.embeddings?.[0]?.values;
+      const found = vector
+        ? await sql`
+            select b.book_number as book, v.chapter_number as chapter, v.verse_number as verse, m.similarity
+            from public.match_verses(${JSON.stringify(vector)}::extensions.vector, 0.3, 24, ${body.translationId}) m
+            join public.verses v on v.id = m.verse_id join public.books b on b.id = v.book_id`
+        : [];
+      await sql`insert into public.ai_usage (user_id, kind, model, input_tokens, cost_usd)
+                values (${user.id}, 'verses', ${EMBEDDING_MODEL}, ${Math.ceil(message.length / 2)}, ${(Math.ceil(message.length / 2) * PRICE_EMBED) / 1e6})`;
+      return json({ verses: found.map((f) => ({ book: f.book, chapter: f.chapter, verse: f.verse, similarity: Number(f.similarity) })) });
+    }
 
     // 3. Quota (atomic, per user + global daily $ cap).
     const { data: remaining, error: quotaError } = await userDb.rpc("consume_ai_quota");
