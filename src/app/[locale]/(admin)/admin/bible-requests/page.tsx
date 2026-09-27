@@ -18,6 +18,17 @@ export default async function AdminBibleRequestsPage({ params }: Props) {
   for (const r of requests ?? []) counts.set(r.source_code, (counts.get(r.source_code) ?? 0) + 1);
   const rows = [...(catalog ?? [])].sort((a, b) => (counts.get(b.code!) ?? 0) - (counts.get(a.code!) ?? 0));
 
+  // Bibles people had in v2.1 that 3.0 couldn't carry over (filed by the upgrade screen).
+  const { data: legacy } = await supabase.from("legacy_version_requests").select("short_name, long_name, preset_name");
+  const legacyCounts = new Map<string, { name: string; preset: string | null; n: number }>();
+  for (const l of legacy ?? []) {
+    const k = l.short_name.toUpperCase();
+    const e = legacyCounts.get(k) ?? { name: l.long_name ?? l.short_name, preset: l.preset_name, n: 0 };
+    e.n += 1;
+    legacyCounts.set(k, e);
+  }
+  const legacyRows = [...legacyCounts.entries()].sort((a, b) => b[1].n - a[1].n);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -44,7 +55,27 @@ export default async function AdminBibleRequestsPage({ params }: Props) {
                 </p>
               </div>
               <Badge variant={r.status === "ready" ? "default" : "secondary"}>{r.status?.replace("_", " ")}</Badge>
-              <span className="w-24 text-right text-sm">{counts.get(r.code!) ?? 0} requests</span>
+              <span className="w-24 text-right text-sm">{counts.get(r.code!) ?? 0} {(counts.get(r.code!) ?? 0) === 1 ? "request" : "requests"}</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <h2 className="pt-4 text-xl font-semibold">Missing after the v2.1 upgrade</h2>
+      <p className="text-sm text-muted-foreground">
+        Bibles people had downloaded in the old app that 3.0 couldn&apos;t carry over. Match them to a source above (or
+        add one), then ingest.
+      </p>
+      <Card>
+        <CardContent className="divide-y p-0">
+          {legacyRows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">None yet.</p>}
+          {legacyRows.map(([code, e]) => (
+            <div key={code} className="flex items-center gap-3 px-4 py-3">
+              <Badge variant="outline" className="w-24 justify-center">{code}</Badge>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-medium">{e.name}</p>
+                {e.preset && <p className="truncate text-xs text-muted-foreground">v2.1 catalogue: {e.preset}</p>}
+              </div>
+              <span className="w-24 text-right text-sm">{e.n} {e.n === 1 ? "person" : "people"}</span>
             </div>
           ))}
         </CardContent>

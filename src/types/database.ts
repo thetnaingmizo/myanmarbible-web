@@ -686,6 +686,36 @@ export type Database = {
         }
         Relationships: []
       }
+      legacy_version_requests: {
+        Row: {
+          created_at: string
+          id: string
+          locale: string | null
+          long_name: string | null
+          preset_name: string | null
+          short_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locale?: string | null
+          long_name?: string | null
+          preset_name?: string | null
+          short_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locale?: string | null
+          long_name?: string | null
+          preset_name?: string | null
+          short_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       lessons: {
         Row: {
           content_en: string | null

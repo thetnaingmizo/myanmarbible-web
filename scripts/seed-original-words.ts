@@ -14,6 +14,18 @@
  *   TAHOT_Job-Sng.txt TAHOT_Isa-Mal.txt TBESG_-.txt TBESH_-.txt
  * (raw.githubusercontent.com/STEPBible/STEPBible-Data/master/…).
  *
+ * Changes made to STEPBible's data (its licence asks us to record them; the app's
+ * licence page points here):
+ *   - lexicon: HTML definitions → plain text, cut to ~700 characters; the few name
+ *     entries with no lemma show their transliteration instead; only the first
+ *     entry per extended Strong's number is kept
+ *   - words: English versification only (the Hebrew verse number in brackets is
+ *     dropped); "/" morpheme splits and the "\" before sof pasuq are removed; empty
+ *     placeholders (words read but not written) are skipped; one reading per word
+ *     position; for Hebrew only the main word's Strong's number is kept
+ *   - added by us, not STEPBible: Burmese glosses (lexicon.gloss_my, AI-drafted and
+ *     editor-reviewed) and AI renderings of words in our Bibles (ai_word_renderings)
+ *
  * Replaces the rows in `lexicon` and `original_words` (keeps Burmese glosses
  * already drafted or reviewed). Loads with psql \copy.
  *
