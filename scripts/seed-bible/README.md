@@ -41,10 +41,15 @@ Re-running updates existing rows if source data changed.
 
 | Code | eBible ID | Language | Name | Verses |
 |------|-----------|----------|------|--------|
-| `judson` | `mya` | my | Judson Myanmar Bible (1835) | 29,768 |
+| `judson` | local `sources/judson-1840.db` | my | Judson Bible (1840) — the text Myanmar Bible v2.1 bundled | 31,102 |
 | `kjv` | `eng-kjv2006` | en | King James Version | 31,102 |
 
-Both are Public Domain.
+All three seeded Bibles: Judson and KJV are public domain; Mizo is the owner-provided source (licence to confirm).
+
+> Until 2026-09-27 `judson` seeded eBible `mya`, which is the **Burmese Common Language Bible 2005** (© Bible Society
+> of Myanmar inside Myanmar), not Judson. It was replaced with real Judson (founder decision); BCL is listed in the
+> catalogue as needing permission. To replace a translation's text in place, run
+> `npm run db:seed-bible -- --only <code> --prune` (verse ids are kept, so installed apps sync the new text).
 
 ## Config
 

@@ -11,6 +11,7 @@
     "db:stop": "npx supabase stop",
     "db:reset": "npx supabase db reset",
     "db:gen-types": "npx supabase gen types typescript --local 2>/dev/null > src/types/database.ts",
+    "db:dump-seed": "bash scripts/dump-seed.sh",
     "db:seed-bible": "npx tsx scripts/seed-bible/index.ts",
     "db:seed-bible:judson": "npx tsx scripts/seed-bible/index.ts --only judson",
     "db:seed-bible:kjv": "npx tsx scripts/seed-bible/index.ts --only kjv",

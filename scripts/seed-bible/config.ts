@@ -19,7 +19,7 @@ export interface TranslationSource {
    * scripts/seed-bible/; `table` must have columns
    * (id, type, book, chapter, verse, text) — see parse-local-sqlite.ts.
    */
-  localSqlite?: { file: string; table: string };
+  localSqlite?: { file: string; table: string; mergedVerseMarkers?: boolean };
   /** English display name */
   nameEn: string;
   /** Myanmar display name */
@@ -36,14 +36,20 @@ export interface TranslationSource {
 
 export const TRANSLATIONS: TranslationSource[] = [
   {
+    // Adoniram Judson's Burmese Bible (1840), public domain — the exact text
+    // Myanmar Bible v2.1 bundled (assets/my-judson.yes, exported 2026-09-27 to
+    // sources/judson-1840.db), so upgrading readers keep the words they know.
+    // (Until 2026-09-27 this code wrongly seeded eBible `mya`, the Common
+    // Language Bible 2005 — © Bible Society of Myanmar inside Myanmar.)
     code: "judson",
-    ebibleId: "mya",
-    nameEn: "Judson Myanmar Bible",
-    nameMy: "\u101A\u102F\u1012\u1019\u1039\u1019\u102C\u1019\u103C\u1014\u103A\u1019\u102C\u1000\u103B\u1019\u103A\u1038\u1005\u102C",
+    ebibleId: "",
+    localSqlite: { file: "sources/judson-1840.db", table: "judson", mergedVerseMarkers: true },
+    nameEn: "Judson Bible (1840)",
+    nameMy: "ယုဒသန် မြန်မာကျမ်းစာ",
     language: "my",
     isDefault: true,
-    licenseInfo: "Public Domain",
-    sourceUrl: "https://ebible.org/find/details.php?id=mya",
+    licenseInfo: "Public Domain (Adoniram Judson, 1840)",
+    sourceUrl: "https://ebible.org/find/details.php?id=myajvb",
   },
   {
     code: "kjv",

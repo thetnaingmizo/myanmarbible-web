@@ -107,7 +107,8 @@ async function versesToEmbed(sb: SupabaseClient, only?: string): Promise<{ id: s
           .range(a, b),
       );
       for (const v of verses) {
-        if (have.has(v.id)) continue;
+        // Empty = joined into an earlier verse (e.g. Judson John 3:36); nothing to embed.
+        if (have.has(v.id) || !v.text.trim()) continue;
         out.push({ id: v.id, input: `${name} ${v.chapter_number}:${v.verse_number} — ${v.text.replace(ZWSP, "").trim()}` });
       }
     }

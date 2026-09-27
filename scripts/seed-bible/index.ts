@@ -10,6 +10,7 @@
  *   npm run db:seed-bible              # Seed all translations (Judson + KJV)
  *   npm run db:seed-bible -- --only judson   # Seed only Myanmar Judson
  *   npm run db:seed-bible -- --only kjv      # Seed only KJV
+ *   npm run db:seed-bible -- --only judson --prune  # …and delete verses the source no longer has
  *   npm run db:seed-bible -- --download-only # Download & parse without DB insert
  *
  * Environment variables required (from .env.local):
@@ -77,11 +78,12 @@ async function loadEnv(): Promise<void> {
 interface CliOptions {
   only: string | null; // Filter to a specific translation code
   downloadOnly: boolean; // Only download + parse, skip DB seeding
+  prune: boolean;
 }
 
 function parseArgs(): CliOptions {
   const args = process.argv.slice(2);
-  const options: CliOptions = { only: null, downloadOnly: false };
+  const options: CliOptions = { only: null, downloadOnly: false, prune: false };
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--only" && args[i + 1]) {
@@ -90,6 +92,11 @@ function parseArgs(): CliOptions {
     }
     if (args[i] === "--download-only") {
       options.downloadOnly = true;
+    }
+    // Delete verses of the seeded translation that the source doesn't have
+    // (e.g. after replacing a translation's text with a different edition).
+    if (args[i] === "--prune") {
+      options.prune = true;
     }
   }
 
@@ -133,7 +140,8 @@ async function main(): Promise<void> {
       console.log("\n[2/3] Parsing local SQLite database...");
       parseResult = parseLocalSqlite(
         path.join(__dirname, translation.localSqlite.file),
-        translation.localSqlite.table
+        translation.localSqlite.table,
+        { mergedVerseMarkers: translation.localSqlite.mergedVerseMarkers }
       );
     } else {
       // Step 1: Download
@@ -150,7 +158,7 @@ async function main(): Promise<void> {
       console.log("\n[3/3] Skipping DB seed (--download-only mode).");
     } else {
       console.log("\n[3/3] Seeding database...");
-      await seedTranslation(translation, parseResult);
+      await seedTranslation(translation, parseResult, { prune: options.prune });
     }
 
     console.log(`--- ${translation.nameEn} done ---\n`);

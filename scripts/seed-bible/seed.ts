@@ -194,7 +194,8 @@ async function upsertVerses(
 
 export async function seedTranslation(
   source: TranslationSource,
-  parseResult: ParseResult
+  parseResult: ParseResult,
+  options: { prune?: boolean } = {}
 ): Promise<void> {
   const supabase = getSupabaseClient();
 
@@ -209,5 +210,41 @@ export async function seedTranslation(
   // 3. Upsert verses
   await upsertVerses(supabase, bookIdMap, parseResult);
 
+  // 4. Optionally remove verses the source doesn't have any more.
+  if (options.prune) await pruneVerses(supabase, bookIdMap, parseResult);
+
   console.log(`Seeding "${source.nameEn}" complete.\n`);
+}
+
+/** Deletes verses of these books that are not in [parseResult]. */
+async function pruneVerses(
+  supabase: ReturnType<typeof createClient>,
+  bookIdMap: BookIdMap,
+  parseResult: ParseResult
+): Promise<void> {
+  const keep = new Set<string>();
+  for (const b of parseResult.books) for (const v of b.verses) keep.add(`${v.bookNumber}:${v.chapter}:${v.verse}`);
+  let pruned = 0;
+  for (const [bookNumber, bookId] of Object.entries(bookIdMap)) {
+    const stale: string[] = [];
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from("verses")
+        .select("id, chapter_number, verse_number")
+        .eq("book_id", bookId)
+        .order("id", { ascending: true })
+        .range(from, from + 999);
+      if (error) throw new Error(`Prune read failed: ${error.message}`);
+      for (const v of data ?? []) {
+        if (!keep.has(`${bookNumber}:${v.chapter_number}:${v.verse_number}`)) stale.push(v.id);
+      }
+      if ((data ?? []).length < 1000) break;
+    }
+    for (let i = 0; i < stale.length; i += 200) {
+      const { error } = await supabase.from("verses").delete().in("id", stale.slice(i, i + 200));
+      if (error) throw new Error(`Prune delete failed: ${error.message}`);
+    }
+    pruned += stale.length;
+  }
+  console.log(`  Pruned ${pruned} verses not in the source.`);
 }

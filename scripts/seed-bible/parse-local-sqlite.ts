@@ -52,7 +52,51 @@ function abbreviate(name: string): string {
   return name.slice(0, 4).trim();
 }
 
-export function parseLocalSqlite(dbPath: string, table: string): ParseResult {
+/**
+ * Myanmar Bible v2.1's Judson file marks verses Judson joined together with a
+ * "(chapter-verse)" prefix pointing at the verse that holds the text, e.g.
+ * John 3:36 = "(3-35) <copy of 3:35>" because Judson's 3:35 covers 35–36.
+ * - marker + copy of the target's text → "" (a continuation: the reader shows
+ *   the target verse as a range, "35–36");
+ * - marker + different text → the marker is dropped, the text kept
+ *   (e.g. Leviticus 22:31–33 carry their own text behind the marker);
+ * - marker + nothing → "" (the file has no text there: 1 Chronicles
+ *   9:35–44 and Titus 3:10–15 are empty in v2.1 too).
+ * Rows are kept so verse ids and verse numbering match the other Bibles.
+ */
+const MERGE_MARKER = /^\((\d+)-(\d+)\)\s*([\s\S]*)$/;
+
+function resolveMergedVerses(books: ParsedBook[]): { merged: number; stripped: number; empty: number } {
+  let merged = 0;
+  let stripped = 0;
+  let empty = 0;
+  for (const book of books) {
+    const original = new Map(book.verses.map((v) => [`${v.chapter}:${v.verse}`, v.text]));
+    const bodyOf = (text: string | undefined) => (text ?? "").replace(MERGE_MARKER, "$3").trim();
+    for (const v of book.verses) {
+      const m = v.text.match(MERGE_MARKER);
+      if (!m) continue;
+      const rest = m[3].trim();
+      if (!rest) {
+        v.text = "";
+        empty++;
+      } else if (rest === bodyOf(original.get(`${m[1]}:${m[2]}`))) {
+        v.text = "";
+        merged++;
+      } else {
+        v.text = rest;
+        stripped++;
+      }
+    }
+  }
+  return { merged, stripped, empty };
+}
+
+export function parseLocalSqlite(
+  dbPath: string,
+  table: string,
+  options: { mergedVerseMarkers?: boolean } = {}
+): ParseResult {
   const db = new Database(dbPath, { readonly: true, fileMustExist: true });
 
   const rows = db
@@ -84,7 +128,9 @@ export function parseLocalSqlite(dbPath: string, table: string): ParseResult {
           // Localized names from the source are the display names readers of
           // this translation expect; keep the Burmese name from BOOKS meta.
           nameEn: sourceName,
-          abbreviationEn: abbreviate(sourceName),
+          // Sources that already use the standard English names (e.g. the
+          // Judson export) keep the standard abbreviations too.
+          abbreviationEn: sourceName === meta.nameEn ? meta.abbreviationEn : abbreviate(sourceName),
         },
         maxChapter: 0,
         verses: [],
@@ -153,7 +199,12 @@ export function parseLocalSqlite(dbPath: string, table: string): ParseResult {
     }
   }
 
+  const markers = options.mergedVerseMarkers ? resolveMergedVerses(books) : null;
+
   const notes = [
+    markers
+      ? `merge markers: ${markers.merged} continuations, ${markers.stripped} kept text, ${markers.empty} empty in source`
+      : "",
     repaired ? `repaired ${repaired} rows with missing book/chapter` : "",
     duplicates ? `skipped ${duplicates} duplicate verse refs` : "",
   ].filter(Boolean);
