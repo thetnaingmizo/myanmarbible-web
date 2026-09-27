@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { updatePassword } from "@/lib/auth/profile-actions";
 import { routing } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
@@ -115,8 +115,8 @@ export function SettingsForm() {
           <p className="mb-4 text-sm text-muted-foreground">
             {t("deleteAccountWarning")}
           </p>
-          <Button variant="destructive" size="sm" disabled>
-            {t("deleteAccount")}
+          <Button variant="destructive" size="sm" asChild>
+            <Link href="/delete-account">{t("deleteAccount")}</Link>
           </Button>
         </CardContent>
       </Card>

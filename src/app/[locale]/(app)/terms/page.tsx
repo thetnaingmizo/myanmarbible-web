@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -13,6 +14,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 const sections = [
   "tService",
+  "tBible",
+  "tAi",
   "tContent",
   "tUse",
   "tWarranty",
@@ -36,7 +39,7 @@ export default async function TermsPage({ params }: Props) {
         <section key={s} className="mt-8">
           <h2 className="text-xl font-semibold">{t(`${s}Title`)}</h2>
           <p className="mt-2 leading-relaxed text-muted-foreground">
-            {t(`${s}Body`)}
+            {t(`${s}Body`, { email: CONTACT_EMAIL })}
           </p>
         </section>
       ))}
