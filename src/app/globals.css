@@ -215,3 +215,23 @@
   vertical-align: super;
   line-height: 0;
 }
+
+/* Highlight fills follow the reader theme, not the site theme (app: opaque on
+   paper, translucent on dark backgrounds). */
+.reader[data-theme="paper"],
+.reader[data-theme="sepia"],
+.reader[data-theme="contrast"] {
+  --hl-promise: #f6de8d;
+  --hl-prayer: #cfe3f5;
+  --hl-teaching: #d6e8c8;
+  --hl-warning: #f5cfc8;
+  --hl-remember: #e2d6f3;
+}
+.reader[data-theme="night"],
+.reader[data-theme="black"] {
+  --hl-promise: rgb(231 199 127 / 0.36);
+  --hl-prayer: rgb(127 176 222 / 0.36);
+  --hl-teaching: rgb(141 187 120 / 0.36);
+  --hl-warning: rgb(227 154 142 / 0.36);
+  --hl-remember: rgb(174 152 214 / 0.36);
+}

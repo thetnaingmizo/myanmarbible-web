@@ -61,7 +61,7 @@ export function TabBar({ signedIn }: { signedIn: boolean }) {
       </nav>
 
       <Sheet open={learnOpen} onOpenChange={setLearnOpen}>
-        <SheetContent side="bottom" className="rounded-t-3xl pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+        <SheetContent aria-describedby={undefined} side="bottom" className="rounded-t-3xl pb-[calc(env(safe-area-inset-bottom)+1rem)]">
           <SheetHeader>
             <SheetTitle>{t("learn")}</SheetTitle>
           </SheetHeader>

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
+import { createClient } from "@/lib/supabase/server";
+import type { Marker } from "@/components/reader/study/context";
 import { getUserBookmarkedVerseIds } from "@/lib/bookmarks/queries";
 import { bibleName, bookName, getAllBooks, getBibles, getChapter } from "@/lib/bible/data";
 import { cleanVerseText, num } from "@/lib/bible/reader-text";
@@ -79,6 +81,17 @@ export default async function ChapterPage({ params, searchParams }: Props) {
   ]);
   if (verses.length === 0) notFound();
 
+  // This reader's highlights and notes in the chapter (RLS: own rows only).
+  const markers: Record<string, Marker> = {};
+  if (userId) {
+    const supabase = await createClient();
+    const { data: rows } = await supabase
+      .from("web_markers")
+      .select("verse_id, highlight, note")
+      .in("verse_id", verses.map((x) => x.id));
+    for (const r of rows ?? []) markers[r.verse_id] = r;
+  }
+
   const data: ReaderData = {
     bible,
     bibles,
@@ -93,6 +106,7 @@ export default async function ChapterPage({ params, searchParams }: Props) {
       ? { bible: parallelBible, book: parallelBook ?? null, verses: parallelVerses }
       : null,
     bookmarkedIds: [...bookmarked].filter((id) => verses.some((x) => x.id === id)),
+    markers,
     signedIn: !!userId,
     targetVerse: v ? Number(v) || null : null,
   };

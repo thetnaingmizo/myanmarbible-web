@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { Bookmark, ChevronDown, ChevronLeft, ChevronRight, Columns2 } from "lucide-react";
+import { Bookmark, ChevronDown, ChevronLeft, ChevronRight, Columns2, StickyNote } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import type { Bible, Book, Verse } from "@/lib/bible/data";
@@ -27,6 +27,9 @@ import { Button } from "@/components/ui/button";
 import { PassagePicker } from "./passage-picker";
 import { DisplaySettings } from "./display-settings";
 import { SelectionBar } from "./selection-bar";
+import { StudySheet } from "./study/study-sheet";
+import type { Marker, StudyContext, StudyMode } from "./study/context";
+import { formatVerseRanges } from "@/lib/bible/reader-text";
 import { saveLastRead, textMetrics, useReaderSettings } from "./settings";
 
 export type ReaderData = {
@@ -42,6 +45,8 @@ export type ReaderData = {
   switchTo: Record<string, string>;
   parallel: { bible: Bible; book: Book | null; verses: Verse[] } | null;
   bookmarkedIds: string[];
+  /** The reader's highlights and notes in this chapter (web_markers), by verse id. */
+  markers: Record<string, Marker>;
   signedIn: boolean;
   targetVerse: number | null;
 };
@@ -61,6 +66,7 @@ function displayName(b: Bible) {
 
 export function Reader({ data }: { data: ReaderData }) {
   const t = useTranslations("Bible");
+  const ts = useTranslations("Study");
   const router = useRouter();
   const search = useSearchParams();
   const settings = useReaderSettings();
@@ -69,6 +75,8 @@ export function Reader({ data }: { data: ReaderData }) {
   const name = nameOf(book, bible.language);
   const [selected, setSelected] = useState<number[]>([]);
   const [flash, setFlash] = useState<number | null>(data.targetVerse);
+  const [study, setStudy] = useState<StudyMode | null>(null);
+  const locale = useLocale();
 
   const href = useCallback(
     (bookId: string, ch: number, extra?: { p?: string | null }) => {
@@ -123,6 +131,8 @@ export function Reader({ data }: { data: ReaderData }) {
       if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
       const el = e.target as HTMLElement;
       if (el.closest("input, textarea, select, [contenteditable], [role=dialog], [role=menu]")) return;
+      // While a panel or menu is open, keys belong to it (Escape closes it, not the selection).
+      if (document.querySelector("[role=dialog][data-state=open], [role=menu][data-state=open]")) return;
       if (e.key === "ArrowLeft" && data.prev) router.push(href(data.prev.bookId, data.prev.chapter));
       if (e.key === "ArrowRight" && data.next) router.push(href(data.next.bookId, data.next.chapter));
       if (e.key === "Escape") setSelected([]);
@@ -139,6 +149,7 @@ export function Reader({ data }: { data: ReaderData }) {
     const n = v.verse_number;
     const isSelected = selected.includes(n);
     const label = labelOf(i);
+    const marker = data.markers[v.id];
     return (
       <span
         key={v.id}
@@ -158,6 +169,7 @@ export function Reader({ data }: { data: ReaderData }) {
           isSelected && "bg-maroon-tint underline decoration-maroon decoration-dotted underline-offset-[6px]",
           !isSelected && flash === n && "bg-gold-tint"
         )}
+        style={!isSelected && flash !== n && marker?.highlight ? { background: `var(--hl-${marker.highlight})` } : undefined}
       >
         {settings.numbers && (
           <span className="verse-num" data-latin={burmese ? undefined : ""} aria-label={`${label} `}>
@@ -166,6 +178,20 @@ export function Reader({ data }: { data: ReaderData }) {
           </span>
         )}
         {cleanVerseText(v.text, paragraph)}
+        {marker?.note && (
+          <button
+            type="button"
+            aria-label={`${ts("note")}: ${marker.note.slice(0, 40)}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelected([n]);
+              setStudy("note");
+            }}
+            className="ml-1 inline-grid size-[1.1em] place-items-center align-[-0.15em] text-gold"
+          >
+            <StickyNote className="size-[0.85em]" aria-hidden />
+          </button>
+        )}
         {bookmarked.has(v.id) && (
           <Bookmark className="ml-1 inline size-[0.8em] fill-current align-baseline text-maroon" aria-label={t("saved")} />
         )}{" "}
@@ -187,6 +213,39 @@ export function Reader({ data }: { data: ReaderData }) {
       return out;
     };
   }, [parallel, through]);
+
+  // The selection as the action bar and study panels see it.
+  const picked = useMemo(() => shown.filter((v) => selected.includes(v.verse_number)), [shown, selected]);
+  const numbers = useMemo(
+    () =>
+      picked.flatMap((v) => {
+        const end = through.get(v.verse_number) ?? v.verse_number;
+        return Array.from({ length: end - v.verse_number + 1 }, (_, k) => v.verse_number + k);
+      }),
+    [picked, through]
+  );
+  const shortName = burmese ? shortBurmeseBookName(name) : name;
+  const reference = `${shortName} ${num(chapter, burmese)}:${formatVerseRanges(numbers, burmese)}`;
+  const returnTo = `/bible/${book.id}/${chapter}${search.size ? `?${search.toString()}` : ""}`;
+  const studyCtx: StudyContext | null = useMemo(
+    () =>
+      picked.length
+        ? {
+            bible,
+            bibles: data.bibles,
+            book,
+            books: data.books,
+            chapter,
+            numbers,
+            verses: picked.map((v) => ({ id: v.id, n: v.verse_number, text: v.text })),
+            reference,
+            signedIn: data.signedIn,
+            locale,
+            markers: data.markers,
+          }
+        : null,
+    [picked, numbers, reference, bible, book, chapter, data.bibles, data.books, data.signedIn, data.markers, locale]
+  );
 
   const pBurmese = parallel?.bible.language === "my";
   const pMetrics = textMetrics(settings, !!pBurmese);
@@ -361,16 +420,16 @@ export function Reader({ data }: { data: ReaderData }) {
       )}
 
       <SelectionBar
-        selected={selected}
+        picked={picked}
+        reference={reference}
         onClear={() => setSelected([])}
-        verses={shown}
-        through={through}
+        onAction={setStudy}
         bookmarked={bookmarked}
+        markers={data.markers}
         signedIn={data.signedIn}
-        reference={(nums) => `${burmese ? shortBurmeseBookName(name) : name} ${num(chapter, burmese)}:${nums}`}
-        burmese={burmese}
-        returnTo={`/bible/${book.id}/${chapter}${search.size ? `?${search.toString()}` : ""}`}
+        returnTo={returnTo}
       />
+      <StudySheet mode={study} ctx={studyCtx} returnTo={`/${locale}${returnTo}`} onClose={() => setStudy(null)} />
     </div>
   );
 }

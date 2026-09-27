@@ -1514,6 +1514,44 @@ export type Database = {
           },
         ]
       }
+      web_markers: {
+        Row: {
+          created_at: string
+          highlight: string | null
+          id: string
+          note: string | null
+          updated_at: string
+          user_id: string
+          verse_id: string
+        }
+        Insert: {
+          created_at?: string
+          highlight?: string | null
+          id?: string
+          note?: string | null
+          updated_at?: string
+          user_id: string
+          verse_id: string
+        }
+        Update: {
+          created_at?: string
+          highlight?: string | null
+          id?: string
+          note?: string | null
+          updated_at?: string
+          user_id?: string
+          verse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "web_markers_verse_id_fkey"
+            columns: ["verse_id"]
+            isOneToOne: false
+            referencedRelation: "verses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       translation_catalog: {

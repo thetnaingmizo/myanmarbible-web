@@ -17,6 +17,14 @@ to `translations`, `books`, `verses`, `profiles` as cross-project changes.
   `db:seed-characters|lessons|blog|podcast|questions` and
   `db:generate-embeddings` for the chat/verse-finder vectors.
 
+## Local AI (edge functions)
+
+- Run `npm run db:functions` (= `supabase functions serve --env-file supabase/functions/.env`)
+  after `db:start` whenever you need the AI features locally. Plain `supabase start` hands the
+  functions a DB host (`supabase_db_…`) that the Deno runtime can't resolve (`getaddrinfo
+  ENOTFOUND`), and it bakes in whatever Gemini key the env file had at creation time; `functions
+  serve` uses the `db` alias and the current key.
+
 ## Conventions
 
 - Bible routes: `/[locale]/bible/[bookId]/[chapter]` where `bookId` is a

@@ -26,7 +26,8 @@
     "db:generate-embeddings": "npx tsx scripts/generate-embeddings.ts",
     "db:generate-embeddings:judson": "npx tsx scripts/generate-embeddings.ts --only judson",
     "db:generate-embeddings:kjv": "npx tsx scripts/generate-embeddings.ts --only kjv",
-    "test": "node --test 'src/**/*.test.ts'"
+    "test": "node --test 'src/**/*.test.ts'",
+    "db:functions": "supabase functions serve --env-file supabase/functions/.env"
   },
   "dependencies": {
     "@google/genai": "^1.41.0",

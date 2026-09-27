@@ -103,7 +103,7 @@ export function PassagePicker({ bible, books, current, label, onGo, trigger }: P
         </button>
         )}
       </DialogTrigger>
-      <DialogContent className="flex max-h-[85vh] flex-col gap-4 overflow-hidden rounded-3xl p-5 sm:max-w-2xl">
+      <DialogContent aria-describedby={undefined} className="flex max-h-[85vh] flex-col gap-4 overflow-hidden rounded-3xl p-5 sm:max-w-2xl">
         <DialogTitle className="font-serif text-xl">{t("goToPassage")}</DialogTitle>
         <form
           onSubmit={(e) => {
