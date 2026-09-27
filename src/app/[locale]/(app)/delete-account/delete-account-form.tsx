@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 // Calls the same `delete-account` edge function the app uses, then signs out.
 export function DeleteAccountForm() {
   const t = useTranslations("Legal");
+  const router = useRouter();
   const [confirm, setConfirm] = useState("");
   const [state, setState] = useState<"idle" | "working" | "done" | "failed">(
     "idle"
@@ -27,6 +29,9 @@ export function DeleteAccountForm() {
     }
     await supabase.auth.signOut();
     setState("done");
+    // Re-render the header and page as signed out; the page shows the confirmation.
+    router.replace("?deleted=1");
+    router.refresh();
   }
 
   if (state === "done") {

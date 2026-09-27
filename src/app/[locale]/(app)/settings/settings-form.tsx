@@ -1,13 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { Link, useRouter } from "@/i18n/navigation";
-import { updatePassword } from "@/lib/auth/profile-actions";
 import { routing } from "@/i18n/routing";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -25,23 +21,6 @@ export function SettingsForm() {
   const t = useTranslations("Settings");
   const locale = useLocale();
   const router = useRouter();
-  const [passwordSuccess, setPasswordSuccess] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handlePasswordChange(formData: FormData) {
-    setLoading(true);
-    setPasswordError("");
-    setPasswordSuccess("");
-    const result = await updatePassword(formData);
-    if (result?.error) {
-      setPasswordError(result.error);
-    } else {
-      setPasswordSuccess(t("passwordUpdated"));
-    }
-    setLoading(false);
-  }
-
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <h1 className="text-2xl font-bold">{t("title")}</h1>
@@ -64,41 +43,6 @@ export function SettingsForm() {
               </Button>
             ))}
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Change Password */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">{t("changePassword")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {passwordError && (
-            <div className="mb-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {passwordError}
-            </div>
-          )}
-          {passwordSuccess && (
-            <div className="mb-4 rounded-md bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">
-              {passwordSuccess}
-            </div>
-          )}
-          <form action={handlePasswordChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">{t("newPassword")}</Label>
-              <Input
-                id="newPassword"
-                name="newPassword"
-                type="password"
-                required
-                minLength={6}
-                autoComplete="new-password"
-              />
-            </div>
-            <Button type="submit" disabled={loading}>
-              {t("updatePassword")}
-            </Button>
-          </form>
         </CardContent>
       </Card>
 

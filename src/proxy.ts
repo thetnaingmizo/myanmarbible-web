@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
+import { localeOf, safeNext } from "./lib/auth/redirect";
 
 const intlMiddleware = createIntlMiddleware(routing);
 
 // Routes that require authentication (after locale prefix is stripped)
 const protectedPaths = ["/chat", "/profile", "/settings", "/verse-finder", "/trivia", "/bookmarks"];
 const adminPaths = ["/admin"];
-const authPaths = ["/login", "/register", "/forgot-password"];
+const authPaths = ["/login"];
 
 function getPathnameWithoutLocale(pathname: string): string {
   for (const locale of routing.locales) {
@@ -54,6 +55,8 @@ export default async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathWithoutLocale = getPathnameWithoutLocale(request.nextUrl.pathname);
+  // Keep the visitor's language on every redirect.
+  const locale = localeOf(request.nextUrl.pathname);
 
   // 4. Redirect unauthenticated users away from protected routes
   const isProtected =
@@ -61,7 +64,7 @@ export default async function proxy(request: NextRequest) {
     adminPaths.some((p) => pathWithoutLocale.startsWith(p));
 
   if (isProtected && !user) {
-    const loginUrl = new URL(`/${routing.defaultLocale}/login`, request.url);
+    const loginUrl = new URL(`/${locale}/login`, request.url);
     loginUrl.searchParams.set("next", request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
   }
@@ -69,9 +72,8 @@ export default async function proxy(request: NextRequest) {
   // 5. Redirect authenticated users away from auth pages
   const isAuthPage = authPaths.some((p) => pathWithoutLocale.startsWith(p));
   if (isAuthPage && user) {
-    return NextResponse.redirect(
-      new URL(`/${routing.defaultLocale}`, request.url)
-    );
+    const next = safeNext(request.nextUrl.searchParams.get("next"), locale);
+    return NextResponse.redirect(new URL(next, request.url));
   }
 
   // 6. Admin route protection (check role via profile)
@@ -86,9 +88,7 @@ export default async function proxy(request: NextRequest) {
       .single();
 
     if (profile?.role !== "admin") {
-      return NextResponse.redirect(
-        new URL(`/${routing.defaultLocale}`, request.url)
-      );
+      return NextResponse.redirect(new URL(`/${locale}`, request.url));
     }
   }
 

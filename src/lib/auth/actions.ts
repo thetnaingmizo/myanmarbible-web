@@ -1,80 +1,61 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNext } from "./redirect";
 
-export async function signInWithEmail(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const next = (formData.get("next") as string) || "/";
+// Sign-in is Google or a 6-digit email code only (founder rule: no
+// passwords, no magic links, no phone).
 
-  const supabase = await createClient();
+type Result = { error: "invalidEmail" | "tooMany" | "failed" | "invalidCode" } | { ok: true };
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  if (error) {
-    return { error: error.message };
-  }
-
-  redirect(next);
+async function appUrl() {
+  if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, "");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  return `${proto}://${host}`;
 }
 
-export async function signUpWithEmail(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const displayName = formData.get("displayName") as string;
-
+/** Emails a 6-digit code (the templates contain only the code, no link). */
+export async function sendEmailCode(email: string): Promise<Result> {
+  const address = email.trim().toLowerCase();
+  if (!EMAIL.test(address)) return { error: "invalidEmail" };
   const supabase = await createClient();
-
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: { full_name: displayName },
-    },
+  const { error } = await supabase.auth.signInWithOtp({
+    email: address,
+    options: { shouldCreateUser: true },
   });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: "Check your email for the confirmation link." };
+  if (error) return { error: error.status === 429 ? "tooMany" : "failed" };
+  return { ok: true };
 }
 
-export async function signInWithGoogle() {
+/** Checks the code; on success the session cookie is set and we redirect. */
+export async function verifyEmailCode(email: string, code: string, next: string, locale: string): Promise<Result> {
+  const token = code.replace(/\D/g, "");
+  if (token.length !== 6) return { error: "invalidCode" };
   const supabase = await createClient();
+  const { error } = await supabase.auth.verifyOtp({
+    email: email.trim().toLowerCase(),
+    token,
+    type: "email",
+  });
+  if (error) return { error: error.status === 429 ? "tooMany" : "invalidCode" };
+  redirect(safeNext(next, locale));
+}
 
+export async function signInWithGoogle(next: string, locale: string): Promise<Result> {
+  const supabase = await createClient();
+  const target = encodeURIComponent(safeNext(next, locale));
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`,
-    },
+    options: { redirectTo: `${await appUrl()}/api/auth/callback?next=${target}` },
   });
-
-  if (error) {
-    return { error: error.message };
-  }
-
+  if (error) return { error: "failed" };
   redirect(data.url);
-}
-
-export async function resetPassword(formData: FormData) {
-  const email = formData.get("email") as string;
-
-  const supabase = await createClient();
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback?next=/settings`,
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: "Check your email for the password reset link." };
 }
 
 export async function signOut() {

@@ -34,7 +34,7 @@ export function UserMenu({ user }: Props) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+        <Button variant="ghost" className="relative size-10 rounded-full p-0" aria-label={`${t("me")}: ${user.displayName}`}>
           <Avatar className="h-8 w-8">
             {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.displayName} />}
             <AvatarFallback className="text-xs">{initials}</AvatarFallback>

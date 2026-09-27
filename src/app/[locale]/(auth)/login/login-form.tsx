@@ -1,150 +1,196 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { signInWithEmail, signInWithGoogle } from "@/lib/auth/actions";
+import { sendEmailCode, signInWithGoogle, verifyEmailCode } from "@/lib/auth/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 type Props = {
   redirectTo?: string;
   error?: string;
 };
 
+type ErrorKey = "invalidEmail" | "invalidCode" | "tooMany" | "failed" | "callback";
+
+const RESEND_SECONDS = 60;
+
+function GoogleMark() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.1A6.6 6.6 0 0 1 5.5 12c0-.73.13-1.44.34-2.1V7.06H2.18A11 11 0 0 0 1 12c0 1.78.43 3.46 1.18 4.94l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15A10.5 10.5 0 0 0 12 1 11 11 0 0 0 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
+    </svg>
+  );
+}
+
+// Google or a 6-digit email code: no passwords, no magic links, no phone.
 export function LoginForm({ redirectTo, error: initialError }: Props) {
   const t = useTranslations("Auth");
-  const [error, setError] = useState(initialError ?? "");
-  const [loading, setLoading] = useState(false);
+  const locale = useLocale();
+  const next = redirectTo ?? `/${locale}`;
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<ErrorKey | null>(initialError ? "callback" : null);
+  const [cooldown, setCooldown] = useState(0);
+  const [pending, startTransition] = useTransition();
+  const codeRef = useRef<HTMLInputElement>(null);
 
-  async function handleSubmit(formData: FormData) {
-    setLoading(true);
-    setError("");
-    if (redirectTo) formData.set("next", redirectTo);
-    const result = await signInWithEmail(formData);
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-    }
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const id = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(id);
+  }, [cooldown]);
+
+  useEffect(() => {
+    if (step === "code") codeRef.current?.focus();
+  }, [step]);
+
+  function send() {
+    setError(null);
+    startTransition(async () => {
+      const r = await sendEmailCode(email);
+      if ("error" in r) return setError(r.error);
+      setStep("code");
+      setCode("");
+      setCooldown(RESEND_SECONDS);
+    });
   }
 
-  async function handleGoogle() {
-    setLoading(true);
-    setError("");
-    const result = await signInWithGoogle();
-    if (result?.error) {
-      setError(result.error);
-      setLoading(false);
-    }
+  function verify(value = code) {
+    setError(null);
+    startTransition(async () => {
+      const r = await verifyEmailCode(email, value, next, locale);
+      if (r && "error" in r) setError(r.error);
+    });
+  }
+
+  function google() {
+    setError(null);
+    startTransition(async () => {
+      const r = await signInWithGoogle(next, locale);
+      if (r && "error" in r) setError(r.error);
+    });
   }
 
   return (
-    <div className="flex min-h-[80vh] items-center justify-center px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl">{t("loginTitle")}</CardTitle>
-          <CardDescription>{t("loginDescription")}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+    <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
+      <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-7 sm:p-9">
+        <h1 className="font-serif text-2xl font-semibold text-ink">{t("signInTitle")}</h1>
+        <p className="mt-2 text-ink-3">{t("signInLead")}</p>
 
-          <form action={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">{t("email")}</Label>
+        {error && (
+          <p role="alert" className="mt-5 rounded-xl bg-maroon-tint px-4 py-3 text-sm text-maroon">
+            {t(`error.${error}`)}
+          </p>
+        )}
+
+        {step === "email" ? (
+          <>
+            <Button variant="outline" size="lg" className="mt-6 w-full" onClick={google} disabled={pending}>
+              <GoogleMark />
+              {t("continueWithGoogle")}
+            </Button>
+
+            <div className="my-6 flex items-center gap-3 text-sm text-ink-3">
+              <span className="h-px flex-1 bg-line" />
+              {t("or")}
+              <span className="h-px flex-1 bg-line" />
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send();
+              }}
+              className="space-y-3"
+            >
+              <Label htmlFor="email">{t("emailAddress")}</Label>
               <Input
                 id="email"
-                name="email"
                 type="email"
-                required
+                inputMode="email"
                 autoComplete="email"
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">{t("password")}</Label>
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-muted-foreground hover:underline"
-                >
-                  {t("forgotPassword")}
-                </Link>
-              </div>
-              <Input
-                id="password"
-                name="password"
-                type="password"
                 required
-                autoComplete="current-password"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {t("signIn")}
+              <Button type="submit" size="lg" className="w-full" disabled={pending || !email} aria-busy={pending}>
+                {t("sendCode")}
+              </Button>
+            </form>
+          </>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              verify();
+            }}
+            className="mt-6 space-y-3"
+          >
+            <p className="text-sm text-ink-2">{t("codeSentTo", { email })}</p>
+            <Label htmlFor="code">{t("enterCode")}</Label>
+            <Input
+              ref={codeRef}
+              id="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={code}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "").slice(0, 6);
+                setCode(v);
+                if (v.length === 6) verify(v);
+              }}
+              className="h-14 text-center font-mono text-2xl tracking-[0.5em]"
+            />
+            <Button type="submit" size="lg" className="w-full" disabled={pending || code.length !== 6} aria-busy={pending}>
+              {t("verify")}
             </Button>
-          </form>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <Separator />
+            <div className="flex flex-wrap justify-between gap-2 pt-1 text-sm">
+              <button
+                type="button"
+                className="font-semibold text-maroon disabled:text-ink-3"
+                onClick={send}
+                disabled={pending || cooldown > 0}
+              >
+                {cooldown > 0 ? t("resendIn", { seconds: cooldown }) : t("resendCode")}
+              </button>
+              <button
+                type="button"
+                className="text-ink-2 hover:underline"
+                onClick={() => {
+                  setStep("email");
+                  setError(null);
+                }}
+              >
+                {t("changeEmail")}
+              </button>
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                {t("orContinueWith")}
-              </span>
-            </div>
-          </div>
-
-          <form action={handleGoogle}>
-            <Button
-              type="submit"
-              variant="outline"
-              className="w-full"
-              disabled={loading}
-            >
-              <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              {t("signInWithGoogle")}
-            </Button>
           </form>
-        </CardContent>
-        <CardFooter className="justify-center">
-          <p className="text-sm text-muted-foreground">
-            {t("noAccount")}{" "}
-            <Link href="/register" className="font-medium hover:underline">
-              {t("signUp")}
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+        )}
+
+        <p className="mt-7 text-xs leading-relaxed text-ink-3">
+          {t.rich("agree", {
+            terms: (chunks) => (
+              <Link href="/terms" className="underline">
+                {chunks}
+              </Link>
+            ),
+            privacy: (chunks) => (
+              <Link href="/privacy" className="underline">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+      </div>
     </div>
   );
 }

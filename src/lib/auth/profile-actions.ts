@@ -30,18 +30,3 @@ export async function updateProfile(formData: FormData) {
 
   return { success: true };
 }
-
-export async function updatePassword(formData: FormData) {
-  const supabase = await createClient();
-  const newPassword = formData.get("newPassword") as string;
-
-  const { error } = await supabase.auth.updateUser({
-    password: newPassword,
-  });
-
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: true };
-}

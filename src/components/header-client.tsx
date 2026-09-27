@@ -89,7 +89,8 @@ export function HeaderClient({ user }: Props) {
             {user ? (
               <UserMenu user={user} />
             ) : (
-              <Button asChild size="sm" className="ml-1">
+              // Phones reach sign-in from the tab bar's "Me".
+              <Button asChild size="sm" className="ml-1 hidden sm:inline-flex">
                 <Link href="/login">{t("signIn")}</Link>
               </Button>
             )}

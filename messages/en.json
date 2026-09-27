@@ -12,7 +12,6 @@
     "podcast": "Podcast",
     "questions": "Questions",
     "login": "Login",
-    "register": "Register",
     "logout": "Logout",
     "profile": "Profile",
     "settings": "Settings",
@@ -91,26 +90,26 @@
     "finalCtaDescription": "Open the Bible in your browser right now, or take it with you on your phone."
   },
   "Auth": {
-    "loginTitle": "Welcome back",
-    "loginDescription": "Sign in to your account",
-    "registerTitle": "Create an account",
-    "registerDescription": "Start your Bible study journey",
-    "forgotPasswordTitle": "Reset password",
-    "forgotPasswordDescription": "Enter your email and we'll send you a reset link",
-    "email": "Email",
-    "password": "Password",
-    "confirmPassword": "Confirm Password",
-    "displayName": "Display Name",
-    "signIn": "Sign In",
-    "signUp": "Sign Up",
-    "signInWithGoogle": "Continue with Google",
-    "sendResetLink": "Send Reset Link",
-    "noAccount": "Don't have an account?",
-    "hasAccount": "Already have an account?",
-    "forgotPassword": "Forgot your password?",
-    "backToLogin": "Back to login",
-    "orContinueWith": "Or continue with",
-    "checkEmail": "Check your email for the confirmation link."
+    "signInTitle": "Sign in to Myanmar Bible",
+    "signInLead": "Sign in to ask questions, save verses and keep notes. Use the same account as in the app.",
+    "continueWithGoogle": "Continue with Google",
+    "or": "or",
+    "emailAddress": "Email address",
+    "sendCode": "Send code",
+    "enterCode": "Enter the 6-digit code",
+    "codeSentTo": "We sent a code to {email}. It can take a minute to arrive.",
+    "resendCode": "Send a new code",
+    "resendIn": "Send a new code in {seconds}s",
+    "changeEmail": "Use a different email",
+    "verify": "Verify",
+    "agree": "By continuing you agree to the <terms>Terms of Use</terms> and <privacy>Privacy Policy</privacy>.",
+    "error": {
+      "invalidEmail": "Enter a valid email address.",
+      "invalidCode": "That code didn't work. Check it, or send a new one.",
+      "tooMany": "Too many tries. Please wait a few minutes and try again.",
+      "failed": "Something went wrong. Please try again.",
+      "callback": "Sign-in didn't finish. Please try again."
+    }
   },
   "Profile": {
     "title": "Profile",
@@ -130,11 +129,7 @@
     "dark": "Dark",
     "system": "System",
     "deleteAccount": "Delete Account",
-    "deleteAccountWarning": "This action cannot be undone.",
-    "changePassword": "Change Password",
-    "newPassword": "New Password",
-    "updatePassword": "Update Password",
-    "passwordUpdated": "Password updated successfully."
+    "deleteAccountWarning": "This action cannot be undone."
   },
   "Chat": {
     "title": "AI Bible Chat",

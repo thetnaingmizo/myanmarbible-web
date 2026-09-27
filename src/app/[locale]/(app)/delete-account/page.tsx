@@ -8,6 +8,7 @@ import { DeleteAccountForm } from "./delete-account-form";
 
 type Props = {
   params: Promise<{ locale: string }>;
+  searchParams?: Promise<{ deleted?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -18,8 +19,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // Public page the app stores link to: how to delete an account in the app,
 // here on the web (signed in), or by email.
-export default async function DeleteAccountPage({ params }: Props) {
+export default async function DeleteAccountPage({ params, searchParams }: Props) {
   const { locale } = await params;
+  const deleted = (await searchParams)?.deleted === "1";
   setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "Legal" });
   const supabase = await createClient();
@@ -31,6 +33,11 @@ export default async function DeleteAccountPage({ params }: Props) {
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
       <h1 className="text-3xl font-bold tracking-tight">{t("deleteTitle")}</h1>
       <p className="mt-2 text-sm text-muted-foreground">{t("lastUpdated")}</p>
+      {deleted && (
+        <p role="status" className="mt-6 rounded-xl bg-maroon-tint px-4 py-3 font-medium text-maroon">
+          {t("deleteDone")}
+        </p>
+      )}
       <p className="mt-6 leading-relaxed">{t("deleteIntro")}</p>
 
       <section className="mt-8">
