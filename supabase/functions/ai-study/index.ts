@@ -11,6 +11,10 @@
 // POST { mode: "prayer", translationId, topic, details?, lang }
 //   → { remaining, content: {prayer, verses, basis} } — never cached or stored (private)
 //   → { crisis: true } when someone may be in danger (free, no AI)
+// POST { mode: "word", strong, position, book, chapter, verse, translationIds: [1–3] }
+//   → { cached, remaining, content: {phrases: {code: text}}, glossMy, glossMyStatus }
+//     how each Bible renders one original-language word here (phrases validated
+//     against the real text) + a Burmese gloss drafted once per word
 // Errors: { error } — unauthorized · bad_request · not_found · daily_limit · global_cap · ai_disabled ·
 //         generation_failed · server_error
 //
@@ -21,7 +25,7 @@ import { GoogleGenAI, HarmBlockThreshold, HarmCategory, ThinkingLevel, Type } fr
 import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3";
 import { citedIndexes, stripInvalidCitations } from "../_shared/citations.ts";
-import { stripZwsp, validDifferences } from "../_shared/differ.ts";
+import { locate, stripZwsp, validDifferences } from "../_shared/differ.ts";
 import { fitMinutes } from "../_shared/guide.ts";
 import { isCrisis } from "../_shared/safety.ts";
 
@@ -31,6 +35,7 @@ const PRICE_OUT = 1.5;
 const EXPLAIN_VERSION = 1;
 const DIFFER_VERSION = 3;
 const GUIDE_VERSION = 1;
+const WORD_VERSION = 1;
 const EMBEDDING_MODEL = "gemini-embedding-001";
 const PRICE_EMBED = 0.2;
 const MAX_GUIDE_VERSES = 40;
@@ -99,6 +104,8 @@ type Body = {
   minutes?: number;
   topic?: string;
   details?: string;
+  strong?: string;
+  position?: number;
 };
 
 Deno.serve(async (req) => {
@@ -502,6 +509,91 @@ Deno.serve(async (req) => {
           basis,
         },
       });
+    }
+
+    if (body.mode === "word") {
+      const strong = body.strong ?? "";
+      const position = body.position ?? 0;
+      const ids = [...new Set(body.translationIds ?? [])].slice(0, 3);
+      if (!/^[GH]\d{4}[A-Za-z]?$/.test(strong) || !Number.isInteger(position) || ids.length === 0) {
+        return json({ error: "bad_request" }, 400);
+      }
+      const [lex] = await sql`select strong, lemma, translit, gloss, definition, gloss_my, gloss_my_status from public.lexicon where strong = ${strong}`;
+      if (!lex) return json({ error: "not_found" }, 404);
+      const rows = await sql<{ code: string; name: string; language: string; text: string }[]>`
+        select t.code, t.name_en as name, t.language, v.text
+        from public.translations t
+        join public.books b on b.translation_id = t.id and b.book_number = ${book!}
+        join public.verses v on v.book_id = b.id and v.chapter_number = ${chapter!} and v.verse_number = ${verse!}
+        where t.id = any(${ids}::uuid[])`;
+      if (rows.length === 0) return json({ error: "not_found" }, 404);
+      const texts = Object.fromEntries(rows.map((r) => [r.code.toLowerCase(), stripZwsp(r.text).trim()]));
+      const key = Object.keys(texts).sort().join(",");
+
+      const [cached] = await sql`
+        select content from public.ai_word_renderings
+        where strong = ${strong} and book_number = ${book!} and chapter_number = ${chapter!} and verse_number = ${verse!}
+          and position = ${position} and translations = ${key} and model = ${MODEL} and prompt_version = ${WORD_VERSION}`;
+      if (cached && lex.gloss_my) {
+        return json({ cached: true, remaining: await remainingNow(), content: cached.content, glossMy: lex.gloss_my, glossMyStatus: lex.gloss_my_status });
+      }
+
+      const quota = await takeQuota();
+      if (quota instanceof Response) return quota;
+
+      const original = await sql<{ position: number; word: string; gloss: string; strong: string }[]>`
+        select position, word, gloss, strong from public.original_words
+        where book_number = ${book!} and chapter_number = ${chapter!} and verse_number = ${verse!} order by position`;
+      const out = await generate(
+        "word",
+        `${RULES}`,
+        `Original-language verse, word by word (word = English gloss): ` +
+          original.map((w) => `${w.word}=${w.gloss}${w.position === position ? " ◀" : ""}`).join(" ") +
+          `\n\nThe word marked ◀ is ${lex.lemma} (${lex.translit}, Strong's ${strong}), meaning "${lex.gloss}".\n` +
+          `The same verse in these Bibles:\n` +
+          rows.map((r) => `${r.code.toLowerCase()} (${r.name}): ${texts[r.code.toLowerCase()]}`).join("\n") +
+          `\n\nFor each Bible, give the short phrase that translates the marked word (this occurrence only — the same ` +
+          `word may appear elsewhere in the verse), copied character-for-character ` +
+          `from its text above (leave it out if that Bible has no clear equivalent). Then give glossMy: what the word ` +
+          `${lex.lemma} itself means ("${lex.gloss}"), in natural Myanmar (Burmese), 1–5 words like a dictionary gloss — ` +
+          `only the word's own meaning, not the other words of this verse, not a sentence.`,
+        {
+          type: Type.OBJECT,
+          properties: {
+            phrases: {
+              type: Type.ARRAY,
+              items: { type: Type.OBJECT, properties: { code: { type: Type.STRING }, phrase: { type: Type.STRING } }, required: ["code", "phrase"] },
+            },
+            glossMy: { type: Type.STRING },
+          },
+          required: ["phrases", "glossMy"],
+        },
+        700,
+      );
+      if (!out) return json({ error: "generation_failed" }, 502);
+      const phrases: Record<string, string> = {};
+      for (const p of Array.isArray(out.phrases) ? out.phrases : []) {
+        const code = typeof p?.code === "string" ? p.code.toLowerCase() : "";
+        const found = texts[code] && typeof p?.phrase === "string" ? locate(texts[code], stripZwsp(p.phrase)) : null;
+        if (found && !phrases[code]) phrases[code] = found;
+      }
+      const content = { phrases };
+      await sql`
+        insert into public.ai_word_renderings
+          (strong, book_number, chapter_number, verse_number, position, translations, model, prompt_version, content)
+        values (${strong}, ${book!}, ${chapter!}, ${verse!}, ${position}, ${key}, ${MODEL}, ${WORD_VERSION}, ${sql.json(content)})
+        on conflict do nothing`;
+      // The Burmese gloss is drafted once per word; editors review it in the admin.
+      let glossMy = lex.gloss_my as string | null;
+      let glossMyStatus = lex.gloss_my_status as string | null;
+      const drafted = typeof out.glossMy === "string" ? out.glossMy.trim().slice(0, 80) : "";
+      if (!glossMy && drafted) {
+        await sql`update public.lexicon set gloss_my = ${drafted}, gloss_my_status = 'ai_draft', gloss_my_updated_at = now()
+                  where strong = ${strong} and gloss_my is null`;
+        glossMy = drafted;
+        glossMyStatus = "ai_draft";
+      }
+      return json({ cached: false, remaining: quota.remaining, content, glossMy, glossMyStatus });
     }
 
     return json({ error: "bad_request" }, 400);

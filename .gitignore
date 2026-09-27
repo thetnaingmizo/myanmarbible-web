@@ -44,3 +44,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 credential.txt
+# Raw source data (large; ingested into the DB by scripts)
+/data/

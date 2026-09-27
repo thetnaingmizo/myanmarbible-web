@@ -172,6 +172,13 @@ export type Database = {
             foreignKeyName: "ai_study_guides_translation_id_fkey"
             columns: ["translation_id"]
             isOneToOne: false
+            referencedRelation: "translation_catalog"
+            referencedColumns: ["translation_id"]
+          },
+          {
+            foreignKeyName: "ai_study_guides_translation_id_fkey"
+            columns: ["translation_id"]
+            isOneToOne: false
             referencedRelation: "translations"
             referencedColumns: ["id"]
           },
@@ -297,10 +304,59 @@ export type Database = {
             foreignKeyName: "ai_verse_explanations_translation_id_fkey"
             columns: ["translation_id"]
             isOneToOne: false
+            referencedRelation: "translation_catalog"
+            referencedColumns: ["translation_id"]
+          },
+          {
+            foreignKeyName: "ai_verse_explanations_translation_id_fkey"
+            columns: ["translation_id"]
+            isOneToOne: false
             referencedRelation: "translations"
             referencedColumns: ["id"]
           },
         ]
+      }
+      ai_word_renderings: {
+        Row: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at: string
+          id: string
+          model: string
+          position: number
+          prompt_version: number
+          strong: string
+          translations: string
+          verse_number: number
+        }
+        Insert: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at?: string
+          id?: string
+          model: string
+          position: number
+          prompt_version: number
+          strong: string
+          translations: string
+          verse_number: number
+        }
+        Update: {
+          book_number?: number
+          chapter_number?: number
+          content?: Json
+          created_at?: string
+          id?: string
+          model?: string
+          position?: number
+          prompt_version?: number
+          strong?: string
+          translations?: string
+          verse_number?: number
+        }
+        Relationships: []
       }
       blog_posts: {
         Row: {
@@ -426,6 +482,13 @@ export type Database = {
           translation_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "books_translation_id_fkey"
+            columns: ["translation_id"]
+            isOneToOne: false
+            referencedRelation: "translation_catalog"
+            referencedColumns: ["translation_id"]
+          },
           {
             foreignKeyName: "books_translation_id_fkey"
             columns: ["translation_id"]
@@ -674,6 +737,78 @@ export type Database = {
         }
         Relationships: []
       }
+      lexicon: {
+        Row: {
+          definition: string | null
+          gloss: string | null
+          gloss_my: string | null
+          gloss_my_status: string | null
+          gloss_my_updated_at: string | null
+          lemma: string
+          pos: string | null
+          strong: string
+          translit: string | null
+        }
+        Insert: {
+          definition?: string | null
+          gloss?: string | null
+          gloss_my?: string | null
+          gloss_my_status?: string | null
+          gloss_my_updated_at?: string | null
+          lemma: string
+          pos?: string | null
+          strong: string
+          translit?: string | null
+        }
+        Update: {
+          definition?: string | null
+          gloss?: string | null
+          gloss_my?: string | null
+          gloss_my_status?: string | null
+          gloss_my_updated_at?: string | null
+          lemma?: string
+          pos?: string | null
+          strong?: string
+          translit?: string | null
+        }
+        Relationships: []
+      }
+      original_words: {
+        Row: {
+          book_number: number
+          chapter_number: number
+          gloss: string | null
+          morph: string | null
+          position: number
+          strong: string | null
+          translit: string | null
+          verse_number: number
+          word: string
+        }
+        Insert: {
+          book_number: number
+          chapter_number: number
+          gloss?: string | null
+          morph?: string | null
+          position: number
+          strong?: string | null
+          translit?: string | null
+          verse_number: number
+          word: string
+        }
+        Update: {
+          book_number?: number
+          chapter_number?: number
+          gloss?: string | null
+          morph?: string | null
+          position?: number
+          strong?: string | null
+          translit?: string | null
+          verse_number?: number
+          word?: string
+        }
+        Relationships: []
+      }
       podcast_episodes: {
         Row: {
           audio_url: string
@@ -895,6 +1030,87 @@ export type Database = {
           is_featured?: boolean
           rating?: number | null
           status?: Database["public"]["Enums"]["content_status"]
+        }
+        Relationships: []
+      }
+      translation_requests: {
+        Row: {
+          created_at: string
+          id: string
+          source_code: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          source_code: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          source_code?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "translation_requests_source_code_fkey"
+            columns: ["source_code"]
+            isOneToOne: false
+            referencedRelation: "translation_catalog"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "translation_requests_source_code_fkey"
+            columns: ["source_code"]
+            isOneToOne: false
+            referencedRelation: "translation_sources"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
+      translation_sources: {
+        Row: {
+          approx_mb: number | null
+          availability: string
+          code: string
+          language: string
+          language_group: string
+          license: string | null
+          name_en: string
+          name_local: string
+          note: string | null
+          scope: string
+          sort_order: number
+          source: string | null
+        }
+        Insert: {
+          approx_mb?: number | null
+          availability?: string
+          code: string
+          language: string
+          language_group: string
+          license?: string | null
+          name_en: string
+          name_local: string
+          note?: string | null
+          scope: string
+          sort_order?: number
+          source?: string | null
+        }
+        Update: {
+          approx_mb?: number | null
+          availability?: string
+          code?: string
+          language?: string
+          language_group?: string
+          license?: string | null
+          name_en?: string
+          name_local?: string
+          note?: string | null
+          scope?: string
+          sort_order?: number
+          source?: string | null
         }
         Relationships: []
       }
@@ -1270,7 +1486,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      translation_catalog: {
+        Row: {
+          approx_mb: number | null
+          availability: string | null
+          code: string | null
+          language: string | null
+          language_group: string | null
+          license: string | null
+          name_en: string | null
+          name_local: string | null
+          note: string | null
+          scope: string | null
+          sort_order: number | null
+          source: string | null
+          status: string | null
+          translation_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       ai_quota_left: { Args: never; Returns: number }
@@ -1303,6 +1537,15 @@ export type Database = {
           chapter_number: number
           text: string
           verse_id: string
+          verse_number: number
+        }[]
+      }
+      word_occurrences: {
+        Args: { lim?: number; p_strong: string }
+        Returns: {
+          book_number: number
+          chapter_number: number
+          total: number
           verse_number: number
         }[]
       }

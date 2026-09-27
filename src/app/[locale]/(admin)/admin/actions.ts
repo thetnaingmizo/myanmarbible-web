@@ -102,3 +102,16 @@ export async function deleteReflection(id: string) {
   if (error) throw new Error(error.message);
   revalidatePath("/[locale]/(admin)/admin/reflections", "page");
 }
+
+/** Saves an editor's Burmese gloss for a lexicon word and marks it reviewed. */
+export async function reviewWordGloss(opts: { strong: string; glossMy: string }) {
+  const { supabase } = await getAdminClient();
+  const glossMy = opts.glossMy.trim();
+  if (!glossMy) throw new Error("Empty gloss");
+  const { error } = await supabase
+    .from("lexicon")
+    .update({ gloss_my: glossMy, gloss_my_status: "reviewed", gloss_my_updated_at: new Date().toISOString() })
+    .eq("strong", opts.strong);
+  if (error) throw new Error(error.message);
+  revalidatePath("/[locale]/(admin)/admin/words", "page");
+}

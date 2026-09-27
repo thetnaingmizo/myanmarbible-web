@@ -70,6 +70,16 @@ export default async function AdminDashboardPage({ params }: Props) {
       href: `/${locale}/admin/reflections`,
     },
     {
+      title: "Word meanings",
+      description: "Burmese glosses for Greek and Hebrew words in word study — AI drafts to review.",
+      href: `/${locale}/admin/words`,
+    },
+    {
+      title: "Bible catalogue & requests",
+      description: "Which Bibles are ready, which need ingesting or permission, and how many people asked for each.",
+      href: `/${locale}/admin/bible-requests`,
+    },
+    {
       title: "AI Answer Reports",
       description: `Answers from the Bible assistant flagged by users. ${aiLine}.`,
       href: `/${locale}/admin/ai-reports`,
