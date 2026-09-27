@@ -1539,6 +1539,10 @@ export type Database = {
     Functions: {
       ai_quota_left: { Args: never; Returns: number }
       ai_today: { Args: never; Returns: string }
+      check_ai_free_call: {
+        Args: { p_kind: string; p_per_day: number }
+        Returns: undefined
+      }
       consume_ai_quota: { Args: never; Returns: number }
       match_verses: {
         Args: {

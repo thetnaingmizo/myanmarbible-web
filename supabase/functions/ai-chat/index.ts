@@ -136,6 +136,13 @@ Deno.serve(async (req) => {
     // Topic search: verses only. One embedding (~$0.000002), no quota; the
     // app shows the real verse text from its own database.
     if (body.mode === "verses") {
+      // No question is taken, but the off switch, the global cap and a
+      // generous per-person limit still apply.
+      const { error: freeError } = await userDb.rpc("check_ai_free_call", { p_kind: "verses", p_per_day: 200 });
+      if (freeError) {
+        const code = ["daily_limit", "global_cap", "ai_disabled"].find((c) => freeError.message.includes(c)) ?? "quota_error";
+        return json({ error: code, verses: [] }, 429);
+      }
       const ai = new GoogleGenAI({ apiKey: geminiKey });
       const emb = await ai.models.embedContent({
         model: EMBEDDING_MODEL,
@@ -235,6 +242,10 @@ Deno.serve(async (req) => {
         `still mention the other main views fairly. Do not present one church's view as the only Christian view.`
       : "";
 
+    // A question that got no answer is given back.
+    const refund = () => sql`update public.ai_quota set turns = greatest(turns - 1, 0)
+                             where user_id = ${user.id} and day = public.ai_today()`;
+
     streaming = true;
     return sse(async (send) => {
       await send("meta", { conversationId, remaining, verses: numbered });
@@ -286,7 +297,7 @@ Deno.serve(async (req) => {
                 (${conversationId}, 'assistant', ${finalText}, ${sql.json(refs)}, ${usage.output})`;
       await sql`update public.chat_conversations set updated_at = now() where id = ${conversationId}`;
       await send("done", { text: finalText, cited, stopped, usage: { ...usage, costUsd: Number(cost.toFixed(6)) } });
-    }, () => sql.end());
+    }, () => sql.end(), refund);
   } catch (e) {
     console.error("ai-chat failed", e);
     streaming = false;
@@ -300,6 +311,7 @@ Deno.serve(async (req) => {
 function sse(
   work: (send: (event: string, data: unknown) => Promise<void>) => Promise<void>,
   cleanup?: () => Promise<void> | void,
+  onFail?: () => Promise<unknown>,
 ): Response {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
@@ -313,6 +325,11 @@ function sse(
         console.error("ai-chat stream failed", e);
         // Provider errors never leak to the client.
         await send("error", { code: "generation_failed" });
+        try {
+          await onFail?.();
+        } catch (e2) {
+          console.error("ai-chat refund failed", e2);
+        }
       } finally {
         await cleanup?.();
         controller.close();

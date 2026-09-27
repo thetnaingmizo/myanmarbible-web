@@ -144,16 +144,31 @@ Deno.serve(async (req) => {
     const { data } = await userDb.rpc("ai_quota_left");
     return typeof data === "number" ? data : null;
   };
+  let charged = false;
   /** Takes one daily question; returns an error response when none is left. */
   const takeQuota = async (): Promise<{ remaining: number } | Response> => {
     const { data, error } = await userDb.rpc("consume_ai_quota");
-    if (!error) return { remaining: data as number };
+    if (!error) {
+      charged = true;
+      return { remaining: data as number };
+    }
     const code = ["daily_limit", "global_cap", "ai_disabled", "not_signed_in"].find((c) => error.message.includes(c)) ?? "quota_error";
     return json({ error: code }, code === "not_signed_in" ? 401 : 429);
   };
 
   const sql = postgres(dbUrl, { prepare: false, max: 1 });
   const ai = new GoogleGenAI({ apiKey: geminiKey });
+  /** A question that got no answer is given back. */
+  const refund = async () => {
+    if (!charged) return;
+    charged = false;
+    await sql`update public.ai_quota set turns = greatest(turns - 1, 0)
+              where user_id = ${user.id} and day = public.ai_today()`;
+  };
+  const failed = async () => {
+    await refund();
+    return json({ error: "generation_failed" }, 502);
+  };
   /** One JSON generation; logs real tokens + cost. */
   const generate = async (
     kind: string,
@@ -251,7 +266,7 @@ Deno.serve(async (req) => {
         },
         lang === "my" ? 1400 : 800,
       );
-      if (!out?.meaning) return json({ error: "generation_failed" }, 502);
+      if (!out?.meaning) return await failed();
       const clean = (s: unknown) => (typeof s === "string" ? stripInvalidCitations(s, numbered.length).trim() : "");
       const fields = { background: clean(out.background), meaning: clean(out.meaning), life: clean(out.life) };
       const content = {
@@ -330,7 +345,7 @@ Deno.serve(async (req) => {
         lang === "my" ? 2400 : 1600,
         ThinkingLevel.MEDIUM,
       );
-      if (!out || typeof out.summary !== "string") return json({ error: "generation_failed" }, 502);
+      if (!out || typeof out.summary !== "string") return await failed();
       const content = { summary: out.summary.trim(), differences: validDifferences(out.differences, texts) };
       await sql`
         insert into public.ai_verse_comparisons
@@ -420,7 +435,7 @@ Deno.serve(async (req) => {
         },
         lang === "my" ? 2600 : 1600,
       );
-      if (!out?.discuss?.questions?.length) return json({ error: "generation_failed" }, 502);
+      if (!out?.discuss?.questions?.length) return await failed();
       const clean = (s: unknown) => (typeof s === "string" ? stripInvalidCitations(s, numbered.length).trim() : "");
       const list = (a: unknown, max: number) => (Array.isArray(a) ? a.map(clean).filter(Boolean).slice(0, max) : []);
       const fitted = fitMinutes(
@@ -496,7 +511,7 @@ Deno.serve(async (req) => {
         },
         lang === "my" ? 1200 : 700,
       );
-      if (!out?.prayer) return json({ error: "generation_failed" }, 502);
+      if (!out?.prayer) return await failed();
       const given: number[] = Array.isArray(out.basis) ? out.basis.map((x: unknown) => Number(x)) : [];
       const basis = [...new Set(given)]
         .filter((n) => Number.isInteger(n) && n >= 1 && n <= numbered.length)
@@ -570,7 +585,7 @@ Deno.serve(async (req) => {
         },
         700,
       );
-      if (!out) return json({ error: "generation_failed" }, 502);
+      if (!out) return await failed();
       const phrases: Record<string, string> = {};
       for (const p of Array.isArray(out.phrases) ? out.phrases : []) {
         const code = typeof p?.code === "string" ? p.code.toLowerCase() : "";
@@ -599,6 +614,11 @@ Deno.serve(async (req) => {
     return json({ error: "bad_request" }, 400);
   } catch (e) {
     console.error("ai-study failed", e);
+    try {
+      await refund();
+    } catch (e2) {
+      console.error("ai-study refund failed", e2);
+    }
     return json({ error: "server_error" }, 500);
   } finally {
     await sql.end();
