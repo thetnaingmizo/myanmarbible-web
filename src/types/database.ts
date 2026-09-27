@@ -121,6 +121,62 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_study_guides: {
+        Row: {
+          audience: string
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at: string
+          id: string
+          lang: string
+          minutes: number
+          model: string
+          prompt_version: number
+          translation_id: string
+          verse_end: number
+          verse_start: number
+        }
+        Insert: {
+          audience: string
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at?: string
+          id?: string
+          lang: string
+          minutes: number
+          model: string
+          prompt_version: number
+          translation_id: string
+          verse_end: number
+          verse_start: number
+        }
+        Update: {
+          audience?: string
+          book_number?: number
+          chapter_number?: number
+          content?: Json
+          created_at?: string
+          id?: string
+          lang?: string
+          minutes?: number
+          model?: string
+          prompt_version?: number
+          translation_id?: string
+          verse_end?: number
+          verse_start?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_study_guides_translation_id_fkey"
+            columns: ["translation_id"]
+            isOneToOne: false
+            referencedRelation: "translations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage: {
         Row: {
           cost_usd: number

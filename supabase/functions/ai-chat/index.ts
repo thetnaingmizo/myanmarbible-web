@@ -1,6 +1,6 @@
 // AI Bible assistant for the app and the website (Server-Sent Events).
 //
-// POST { message, translationId, lang: "my" | "en", conversationId?, mode? }
+// POST { message, translationId, lang: "my" | "en", conversationId?, mode?, tradition? }
 // mode "verses": semantic verse search only (topic results) — no answer, no quota.
 // with the user's JWT (guests included).
 //
@@ -53,6 +53,20 @@ How you answer:
 - Pastoral questions: be gentle and practical, and encourage talking with a pastor or trusted believer.
 - Keep answers short: 2–5 short paragraphs or a short list. Plain text, no headings, no tables.`;
 
+// A15: the reader may say which church they belong to; answers then add
+// that church's usual view where churches differ (still fair to others).
+const TRADITIONS = {
+  baptist: "Baptist",
+  catholic: "Roman Catholic",
+  anglican: "Anglican",
+  methodist: "Methodist",
+  presbyterian: "Presbyterian",
+  pentecostal: "Pentecostal / Assemblies of God",
+  adventist: "Seventh-day Adventist",
+  lutheran: "Lutheran",
+  evangelical: "Evangelical / non-denominational",
+} as const;
+
 const LANG = {
   my: "Always answer in Myanmar (Burmese), natural everyday Unicode Burmese. Keep book names in Burmese.",
   en: "Always answer in English.",
@@ -79,7 +93,14 @@ Deno.serve(async (req) => {
   const user = auth?.user;
   if (authError || !user) return json({ error: "unauthorized" }, 401);
 
-  let body: { message?: string; translationId?: string; lang?: string; conversationId?: string; mode?: string };
+  let body: {
+    message?: string;
+    translationId?: string;
+    lang?: string;
+    conversationId?: string;
+    mode?: string;
+    tradition?: string;
+  };
   try {
     body = await req.json();
   } catch {
@@ -208,6 +229,12 @@ Deno.serve(async (req) => {
       ? numbered.map((v) => `[V${v.n}] ${v.label}: ${v.text}`).join("\n")
       : "(No verses found for this question.)";
 
+    const church = TRADITIONS[body.tradition as keyof typeof TRADITIONS];
+    const tradition = church
+      ? `\nThe reader belongs to a ${church} church. Where churches differ, give their church's usual view clearly and ` +
+        `still mention the other main views fairly. Do not present one church's view as the only Christian view.`
+      : "";
+
     streaming = true;
     return sse(async (send) => {
       await send("meta", { conversationId, remaining, verses: numbered });
@@ -221,7 +248,7 @@ Deno.serve(async (req) => {
           { role: "user", parts: [{ text: `Verses you may cite:\n${context}\n\nQuestion: ${message}` }] },
         ],
         config: {
-          systemInstruction: `${SYSTEM}\n\n${LANG[lang]}`,
+          systemInstruction: `${SYSTEM}\n\n${LANG[lang]}${tradition}`,
           maxOutputTokens: lang === "my" ? 1200 : 700,
           temperature: 0.4,
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },

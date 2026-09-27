@@ -6,6 +6,11 @@
 //   → { cached, remaining, content: {background, meaning, life, verses: [{n, book, chapter, verse}], cited} }
 // POST { mode: "differ", translationIds: [2–3], book, chapter, verse, lang }
 //   → { cached, remaining, content: {summary, differences: [{phrases: {code: text}, note}]} }
+// POST { mode: "guide", translationId, book, chapter, verse, verseEnd, audience, minutes, lang }
+//   → { cached, remaining, content: {sections: [{kind, minutes, text?, points?, questions?}], verses} }
+// POST { mode: "prayer", translationId, topic, details?, lang }
+//   → { remaining, content: {prayer, verses, basis} } — never cached or stored (private)
+//   → { crisis: true } when someone may be in danger (free, no AI)
 // Errors: { error } — unauthorized · bad_request · not_found · daily_limit · global_cap · ai_disabled ·
 //         generation_failed · server_error
 //
@@ -17,12 +22,35 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import postgres from "npm:postgres@3";
 import { citedIndexes, stripInvalidCitations } from "../_shared/citations.ts";
 import { stripZwsp, validDifferences } from "../_shared/differ.ts";
+import { fitMinutes } from "../_shared/guide.ts";
+import { isCrisis } from "../_shared/safety.ts";
 
 const MODEL = "gemini-3.1-flash-lite";
 const PRICE_IN = 0.25; // USD per 1M tokens; output includes thinking
 const PRICE_OUT = 1.5;
 const EXPLAIN_VERSION = 1;
 const DIFFER_VERSION = 3;
+const GUIDE_VERSION = 1;
+const EMBEDDING_MODEL = "gemini-embedding-001";
+const PRICE_EMBED = 0.2;
+const MAX_GUIDE_VERSES = 40;
+
+const AUDIENCE = {
+  cell: "a home cell group of adults (mixed ages, some new believers)",
+  youth: "a youth group (ages 14–22)",
+  sunday: "a Sunday school class of adults",
+  personal: "one person studying alone",
+} as const;
+
+const TOPICS = {
+  family: "my family",
+  health: "health and healing",
+  worry: "worry and anxiety",
+  thanks: "thanksgiving",
+  forgiveness: "forgiveness",
+  guidance: "guidance for a decision",
+  other: "something on my heart",
+} as const;
 const MAX_RANGE = 5;
 
 const cors = {
@@ -67,6 +95,10 @@ type Body = {
   verseEnd?: number;
   lang?: string;
   style?: string;
+  audience?: string;
+  minutes?: number;
+  topic?: string;
+  details?: string;
 };
 
 Deno.serve(async (req) => {
@@ -97,7 +129,9 @@ Deno.serve(async (req) => {
   }
   const lang: "my" | "en" = body.lang === "en" ? "en" : "my";
   const { book, chapter, verse } = body;
-  if (![book, chapter, verse].every((n) => Number.isInteger(n) && n! > 0)) return json({ error: "bad_request" }, 400);
+  if (body.mode !== "prayer" && ![book, chapter, verse].every((n) => Number.isInteger(n) && n! > 0)) {
+    return json({ error: "bad_request" }, 400);
+  }
 
   const remainingNow = async () => {
     const { data } = await userDb.rpc("ai_quota_left");
@@ -297,6 +331,177 @@ Deno.serve(async (req) => {
         values (${book!}, ${chapter!}, ${verse!}, ${key}, ${lang}, ${MODEL}, ${DIFFER_VERSION}, ${sql.json(content)})
         on conflict do nothing`;
       return json({ cached: false, remaining: quota.remaining, content });
+    }
+
+    if (body.mode === "guide") {
+      const translationId = body.translationId;
+      const end = Math.max(verse!, body.verseEnd ?? verse!);
+      const audience = (Object.keys(AUDIENCE) as (keyof typeof AUDIENCE)[]).find((a) => a === body.audience) ?? "cell";
+      const minutes = [30, 45, 60].includes(body.minutes ?? 0) ? body.minutes! : 45;
+      if (!translationId || end - verse! >= MAX_GUIDE_VERSES) return json({ error: "bad_request" }, 400);
+
+      const [cached] = await sql`
+        select content from public.ai_study_guides
+        where translation_id = ${translationId} and book_number = ${book!} and chapter_number = ${chapter!}
+          and verse_start = ${verse!} and verse_end = ${end} and audience = ${audience} and minutes = ${minutes}
+          and lang = ${lang} and model = ${MODEL} and prompt_version = ${GUIDE_VERSION}`;
+      if (cached) return json({ cached: true, remaining: await remainingNow(), content: cached.content });
+
+      const [bk] = await sql`
+        select b.id, t.language, coalesce(case when t.language = 'my' then b.name_my end, b.name_en) as name
+        from public.books b join public.translations t on t.id = b.translation_id
+        where b.translation_id = ${translationId} and b.book_number = ${book!}`;
+      if (!bk) return json({ error: "not_found" }, 404);
+      const passage = await sql<{ id: string; verse: number; text: string }[]>`
+        select id, verse_number as verse, text from public.verses
+        where book_id = ${bk.id} and chapter_number = ${chapter!} and verse_number between ${verse!} and ${end}
+        order by verse_number`;
+      if (passage.length === 0) return json({ error: "not_found" }, 404);
+
+      const quota = await takeQuota();
+      if (quota instanceof Response) return quota;
+
+      const related = await sql<{ book: number; chapter: number; verse: number; text: string; name: string }[]>`
+        select b.book_number as book, m.chapter_number as chapter, m.verse_number as verse, m.text,
+               coalesce(case when ${bk.language} = 'my' then b.name_my end, b.name_en) as name
+        from public.verse_embeddings ve,
+             public.match_verses(ve.embedding, 0.55, 12, ${translationId}) m
+        join public.books b on b.id = m.book_id
+        where ve.verse_id = ${passage[Math.floor(passage.length / 2)].id}
+          and not (b.book_number = ${book!} and m.chapter_number = ${chapter!})
+        limit 4`;
+      const name = stripZwsp(bk.name as string);
+      const numbered = [
+        ...passage.map((v) => ({ book: book!, chapter: chapter!, verse: v.verse, text: v.text, name })),
+        ...related.map((r) => ({ ...r, name: stripZwsp(r.name) })),
+      ].map((v, i) => ({ ...v, n: i + 1, label: `${v.name} ${v.chapter}:${v.verse}` }));
+      const range = end > verse! ? `${name} ${chapter}:${verse}–${end}` : `${name} ${chapter}:${verse}`;
+      const context = numbered.map((v) => `[V${v.n}] ${v.label}: ${stripZwsp(v.text)}`).join("\n");
+
+      const out = await generate(
+        "guide",
+        `${RULES}\n- Cite the verses you rely on inline exactly like "[V2]", only from the list given.\n` +
+          `- This is an OUTLINE for a leader, not a sermon: short prompts and questions, never long teaching.\n${LANG[lang]}`,
+        `Make a ${minutes}-minute Bible study on ${range} for ${AUDIENCE[audience]}.\n` +
+          `Sections (give each a number of minutes; together they must fill ${minutes} minutes, including reading the passage aloud):\n` +
+          `- opening: one warm-up question anyone can answer (not about the Bible yet).\n` +
+          `- passageMinutes: minutes to read the passage aloud (the app shows the real text).\n` +
+          `- explore: 3 short observations about what the passage says, each citing its verse.\n` +
+          `- discuss: 4–5 open discussion questions, from understanding to personal.\n` +
+          `- apply: one concrete thing to do this week.\n` +
+          `- pray: a short guide for group prayer (topics, not a written prayer).\n\n` +
+          `Verses you may cite:\n${context}`,
+        {
+          type: Type.OBJECT,
+          properties: {
+            opening: { type: Type.OBJECT, properties: { minutes: { type: Type.INTEGER }, text: { type: Type.STRING } }, required: ["minutes", "text"] },
+            passageMinutes: { type: Type.INTEGER },
+            explore: {
+              type: Type.OBJECT,
+              properties: { minutes: { type: Type.INTEGER }, points: { type: Type.ARRAY, items: { type: Type.STRING } } },
+              required: ["minutes", "points"],
+            },
+            discuss: {
+              type: Type.OBJECT,
+              properties: { minutes: { type: Type.INTEGER }, questions: { type: Type.ARRAY, items: { type: Type.STRING } } },
+              required: ["minutes", "questions"],
+            },
+            apply: { type: Type.OBJECT, properties: { minutes: { type: Type.INTEGER }, text: { type: Type.STRING } }, required: ["minutes", "text"] },
+            pray: { type: Type.OBJECT, properties: { minutes: { type: Type.INTEGER }, text: { type: Type.STRING } }, required: ["minutes", "text"] },
+          },
+          required: ["opening", "passageMinutes", "explore", "discuss", "apply", "pray"],
+        },
+        lang === "my" ? 2600 : 1600,
+      );
+      if (!out?.discuss?.questions?.length) return json({ error: "generation_failed" }, 502);
+      const clean = (s: unknown) => (typeof s === "string" ? stripInvalidCitations(s, numbered.length).trim() : "");
+      const list = (a: unknown, max: number) => (Array.isArray(a) ? a.map(clean).filter(Boolean).slice(0, max) : []);
+      const fitted = fitMinutes(
+        [out.opening?.minutes, out.passageMinutes, out.explore?.minutes, out.discuss?.minutes, out.apply?.minutes, out.pray?.minutes],
+        minutes,
+      );
+      const content = {
+        minutes,
+        sections: [
+          { kind: "opening", minutes: fitted[0], text: clean(out.opening?.text) },
+          { kind: "passage", minutes: fitted[1] },
+          { kind: "explore", minutes: fitted[2], points: list(out.explore?.points, 5) },
+          { kind: "discuss", minutes: fitted[3], questions: list(out.discuss?.questions, 6) },
+          { kind: "apply", minutes: fitted[4], text: clean(out.apply?.text) },
+          { kind: "pray", minutes: fitted[5], text: clean(out.pray?.text) },
+        ],
+        verses: numbered.map((v) => ({ n: v.n, book: v.book, chapter: v.chapter, verse: v.verse })),
+      };
+      await sql`
+        insert into public.ai_study_guides
+          (translation_id, book_number, chapter_number, verse_start, verse_end, audience, minutes, lang, model, prompt_version, content)
+        values (${translationId}, ${book!}, ${chapter!}, ${verse!}, ${end}, ${audience}, ${minutes}, ${lang}, ${MODEL},
+                ${GUIDE_VERSION}, ${sql.json(content)})
+        on conflict do nothing`;
+      return json({ cached: false, remaining: quota.remaining, content });
+    }
+
+    if (body.mode === "prayer") {
+      const translationId = body.translationId;
+      const topic = (Object.keys(TOPICS) as (keyof typeof TOPICS)[]).find((t) => t === body.topic) ?? "other";
+      const details = (body.details ?? "").trim().slice(0, 300);
+      if (!translationId) return json({ error: "bad_request" }, 400);
+      // Someone in danger gets help, not a generated prayer.
+      if (details && isCrisis(details)) return json({ crisis: true });
+
+      const quota = await takeQuota();
+      if (quota instanceof Response) return quota;
+
+      const query = stripZwsp(`${TOPICS[topic]} ${details}`);
+      const emb = await ai.models.embedContent({
+        model: EMBEDDING_MODEL,
+        contents: query,
+        config: { outputDimensionality: 768, taskType: "RETRIEVAL_QUERY" },
+      });
+      const embedTokens = Math.ceil(query.length / 2);
+      await sql`insert into public.ai_usage (user_id, kind, model, input_tokens, cost_usd)
+                values (${user.id}, 'prayer', ${EMBEDDING_MODEL}, ${embedTokens}, ${(embedTokens * PRICE_EMBED) / 1e6})`;
+      const vector = emb.embeddings?.[0]?.values;
+      const found = vector
+        ? await sql<{ book: number; chapter: number; verse: number; text: string; name: string }[]>`
+            select b.book_number as book, m.chapter_number as chapter, m.verse_number as verse, m.text,
+                   coalesce(case when t.language = 'my' then b.name_my end, b.name_en) as name
+            from public.match_verses(${JSON.stringify(vector)}::extensions.vector, 0.3, 6, ${translationId}) m
+            join public.books b on b.id = m.book_id join public.translations t on t.id = b.translation_id`
+        : [];
+      const numbered = found.map((v, i) => ({ ...v, n: i + 1, label: `${stripZwsp(v.name)} ${v.chapter}:${v.verse}` }));
+      const context = numbered.map((v) => `[V${v.n}] ${v.label}: ${stripZwsp(v.text)}`).join("\n");
+
+      // The details are sent to the model to write the prayer and are never stored.
+      const out = await generate(
+        "prayer",
+        `${RULES}\n${LANG[lang]}`,
+        `Write a short prayer (4–6 sentences) that the READER will pray, in the first person ("I", "me", "my"), ` +
+          `addressed to God, about: ${TOPICS[topic]}.` +
+          (details ? ` What they shared: "${details}".` : "") +
+          ` Simple, honest, warm words; no preaching. End with "${lang === "my" ? "ယေရှု၏ နာမတော်အားဖြင့် ဆုတောင်းပါ၏။ အာမင်။" : "In Jesus' name, Amen."}"\n` +
+          `Base it on 1–3 of these verses and list their numbers in "basis" (do not quote them, do not write [Vn] in the prayer).\n\n` +
+          `Verses:\n${context || "(none)"}`,
+        {
+          type: Type.OBJECT,
+          properties: { prayer: { type: Type.STRING }, basis: { type: Type.ARRAY, items: { type: Type.INTEGER } } },
+          required: ["prayer", "basis"],
+        },
+        lang === "my" ? 1200 : 700,
+      );
+      if (!out?.prayer) return json({ error: "generation_failed" }, 502);
+      const given: number[] = Array.isArray(out.basis) ? out.basis.map((x: unknown) => Number(x)) : [];
+      const basis = [...new Set(given)]
+        .filter((n) => Number.isInteger(n) && n >= 1 && n <= numbered.length)
+        .slice(0, 3);
+      return json({
+        remaining: quota.remaining,
+        content: {
+          prayer: stripInvalidCitations(String(out.prayer), 0).trim(),
+          verses: numbered.map((v) => ({ n: v.n, book: v.book, chapter: v.chapter, verse: v.verse })),
+          basis,
+        },
+      });
     }
 
     return json({ error: "bad_request" }, 400);

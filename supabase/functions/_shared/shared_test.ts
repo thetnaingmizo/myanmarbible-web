@@ -69,3 +69,12 @@ Deno.test("phrases match across stray spaces in Burmese sources", async () => {
   assertEquals(locate("For God so loved", "SO  LOVED"), "so loved");
   assertEquals(locate(text, "မရှိ"), null);
 });
+
+Deno.test("study guide minutes add up to the meeting length", async () => {
+  const { fitMinutes } = await import("./guide.ts");
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  assertEquals(sum(fitMinutes([5, 5, 10, 15, 5, 5], 45)), 45);
+  assertEquals(sum(fitMinutes([10, 10, 10, 10, 10, 10], 30)), 30);
+  assertEquals(fitMinutes([0, NaN, 3], 12).every((m) => m >= 2), true);
+  assertEquals(sum(fitMinutes([1, 1, 1, 1, 1, 50], 60)), 60);
+});
