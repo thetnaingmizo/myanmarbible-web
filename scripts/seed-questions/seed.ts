@@ -18,7 +18,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { QUESTIONS, type QuestionEntry } from "./question-list.js";
 
 // ---------------------------------------------------------------------------
@@ -119,10 +119,12 @@ Return a JSON object with these exact fields:
 Use standard English book names for verse references. Keep the total response compact.`;
 
   const response = await genai.models.generateContent({
-    model: "gemini-2.5-flash-lite",
+    model: "gemini-3.1-flash-lite",
     contents: prompt,
     config: {
       responseMimeType: "application/json",
+      // Thinking tokens count toward maxOutputTokens on 3.x; keep room for the JSON.
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
       maxOutputTokens: 4096,
     },
   });

@@ -1,3 +1,4 @@
+import { ThinkingLevel } from "@google/genai";
 import { genai, CHAT_MODEL } from "./client";
 import {
   retrieveVerses,
@@ -91,6 +92,8 @@ export async function chatWithRAG(
       temperature: 0.7,
       topP: 0.9,
       maxOutputTokens: 2048,
+      // Matches the tested setup; default thinking on 3.x adds cost and latency.
+      thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
     },
     history: geminiHistory,
   });

@@ -23,6 +23,8 @@ export const genai = new Proxy({} as GoogleGenAI, {
   },
 });
 
-export const CHAT_MODEL = "gemini-2.5-flash-lite";
+// gemini-2.5-flash-lite is closed to new API keys. 3.1 Flash-Lite won the Burmese
+// quality test (docs/research/ai-eval-2026-09-27.md in the workspace root).
+export const CHAT_MODEL = "gemini-3.1-flash-lite";
 export const EMBEDDING_MODEL = "gemini-embedding-001";
 export const EMBEDDING_DIMENSIONS = 768;
