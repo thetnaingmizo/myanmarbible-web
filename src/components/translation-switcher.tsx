@@ -27,12 +27,15 @@ export function TranslationSwitcher({ translations, current, hrefMap }: Props) {
   const router = useRouter();
 
   return (
-    <div className="flex gap-1">
+    // Scrolls sideways on narrow screens instead of widening the page.
+    <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:px-0">
       {translations.map((t) => (
         <Button
           key={t.id}
           variant={current === t.id ? "default" : "outline"}
           size="sm"
+          className="shrink-0"
+          aria-pressed={current === t.id}
           onClick={() => {
             const href = hrefMap?.[t.id] ?? `/bible?t=${t.id}`;
             router.push(href);

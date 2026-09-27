@@ -29,12 +29,14 @@ export default async function LocaleLayout({ children, params }: Props) {
       <div className="flex min-h-screen flex-col">
         <Suspense
           fallback={
-            <header className="sticky top-0 z-50 h-14 w-full border-b bg-background/95" />
+            <header className="sticky top-0 z-50 h-16 w-full border-b border-hairline bg-paper" />
           }
         >
           <Header />
         </Suspense>
-        <main className="flex-1">{children}</main>
+        <main id="main" className="flex-1">
+          {children}
+        </main>
         <Footer />
       </div>
     </NextIntlClientProvider>

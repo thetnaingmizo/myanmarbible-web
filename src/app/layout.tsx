@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Geist, Geist_Mono, Noto_Sans_Myanmar } from "next/font/google";
+import { Figtree, Literata, Noto_Sans_Myanmar } from "next/font/google";
 import { getLocale } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Same families as the app (app_typography.dart): Figtree for Latin UI,
+// Literata for Latin scripture and display, Noto Sans Myanmar for Burmese.
+const figtree = Figtree({
+  variable: "--font-figtree",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const literata = Literata({
+  variable: "--font-literata",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const notoSansMyanmar = Noto_Sans_Myanmar({
-  variable: "--font-myanmar",
+  variable: "--font-noto-myanmar",
   weight: ["400", "500", "600", "700"],
   subsets: ["myanmar"],
   display: "swap",
@@ -24,11 +28,11 @@ const notoSansMyanmar = Noto_Sans_Myanmar({
 
 export const metadata: Metadata = {
   title: {
-    default: "MyanmarBible AI",
-    template: "%s | MyanmarBible AI",
+    default: "Myanmar Bible",
+    template: "%s | Myanmar Bible",
   },
   description:
-    "AI-powered Myanmar Bible study companion. Ask questions, find verses, and deepen your understanding.",
+    "Read the Bible in Burmese and English, and study it with answers that cite real verses.",
 };
 
 type Props = {
@@ -41,7 +45,7 @@ export default async function RootLayout({ children }: Props) {
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${notoSansMyanmar.variable} font-sans antialiased`}
+        className={`${figtree.variable} ${literata.variable} ${notoSansMyanmar.variable} font-sans antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           {children}

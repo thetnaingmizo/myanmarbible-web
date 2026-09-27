@@ -7,8 +7,31 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans), var(--font-myanmar);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-figtree), var(--font-noto-myanmar), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-literata), var(--font-noto-myanmar), ui-serif, Georgia, serif;
+  --font-myanmar: var(--font-noto-myanmar), sans-serif;
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunk: var(--sunk);
+  --color-line: var(--line);
+  --color-hairline: var(--hairline);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-maroon: var(--maroon);
+  --color-maroon-button: var(--maroon-button);
+  --color-maroon-hover: var(--maroon-hover);
+  --color-maroon-tint: var(--maroon-tint);
+  --color-verse-number: var(--verse-number);
+  --color-gold: var(--gold);
+  --color-gold-tint: var(--gold-tint);
+  --color-success: var(--success);
+  --color-skeleton: var(--skeleton);
+  --color-hl-promise: var(--hl-promise);
+  --color-hl-prayer: var(--hl-prayer);
+  --color-hl-teaching: var(--hl-teaching);
+  --color-hl-warning: var(--hl-warning);
+  --color-hl-remember: var(--hl-remember);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,81 +71,114 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.43 0.12 26);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.58 0.1 26);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Myanmar Bible 3.0 "Parchment & Maroon" — mirrors the app's mb_tokens.dart. */
+  --radius: 0.75rem;
+  --paper: #fbf8f3;
+  --surface: #ffffff;
+  --sunk: #f3ede4;
+  --line: #e4dacd;
+  --hairline: #ece3d8;
+  --ink: #1f1815;
+  --ink-2: #5b4f48;
+  --ink-3: #7a6d64;
+  --maroon: #882c2c;
+  --maroon-button: #882c2c;
+  --maroon-hover: #6e2020;
+  --maroon-tint: #f3e3df;
+  --verse-number: #a0634f;
+  --gold: #8a5a0b;
+  --gold-tint: #f7ebd3;
+  --success: #2f6b3a;
+  --skeleton: #efe7dc;
+  --hl-promise: #f6de8d;
+  --hl-prayer: #cfe3f5;
+  --hl-teaching: #d6e8c8;
+  --hl-warning: #f5cfc8;
+  --hl-remember: #e2d6f3;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary: var(--maroon);
+  --primary-foreground: #ffffff;
+  --secondary: var(--sunk);
+  --secondary-foreground: var(--ink);
+  --muted: var(--sunk);
+  --muted-foreground: var(--ink-3);
+  --accent: var(--maroon-tint);
+  --accent-foreground: var(--maroon);
+  --destructive: #b3261e;
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--maroon);
+  --chart-1: #882c2c;
+  --chart-2: #8a5a0b;
+  --chart-3: #1f6f6b;
+  --chart-4: #3e4c6b;
+  --chart-5: #a0634f;
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--maroon);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: var(--maroon-tint);
+  --sidebar-accent-foreground: var(--maroon);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--maroon);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.74 0.1 24);
-  --primary-foreground: oklch(0.24 0.08 26);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.09 25);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --paper: #15110f;
+  --surface: #201916;
+  --sunk: #2a221e;
+  --line: #3a2f2a;
+  --hairline: #2e2622;
+  --ink: #f2eae2;
+  --ink-2: #c9bdb3;
+  --ink-3: #a0948a;
+  --maroon: #e8a396;
+  --maroon-button: #a63a34;
+  --maroon-hover: #8f2f2a;
+  --maroon-tint: #3a2320;
+  --verse-number: #d9a08c;
+  --gold: #e7c77f;
+  --gold-tint: #33291a;
+  --success: #7fbf8a;
+  --skeleton: #2a221e;
+  --hl-promise: rgb(231 199 127 / 0.36);
+  --hl-prayer: rgb(127 176 222 / 0.36);
+  --hl-teaching: rgb(141 187 120 / 0.36);
+  --hl-warning: rgb(227 154 142 / 0.36);
+  --hl-remember: rgb(174 152 214 / 0.36);
+  --destructive: #f2b8b5;
+  --primary-foreground: #2a1512;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
-    @apply bg-background text-foreground;
+    line-height: 1.55;
+  }
+  /* Burmese needs taller lines for stacked vowels and medials (app: UI 1.7). */
+  html:lang(my) body {
+    line-height: 1.7;
+  }
+  ::selection {
+    background: var(--maroon-tint);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

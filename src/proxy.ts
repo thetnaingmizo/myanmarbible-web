@@ -24,7 +24,7 @@ export default async function proxy(request: NextRequest) {
   const intlResponse = intlMiddleware(request);
 
   // 2. Create a Supabase client that can read/write cookies on the response
-  let response = intlResponse || NextResponse.next();
+  const response = intlResponse || NextResponse.next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

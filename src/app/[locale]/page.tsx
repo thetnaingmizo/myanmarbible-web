@@ -20,9 +20,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-
-const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.zofate.myanmarbible";
+import { PLAY_STORE_URL } from "@/lib/site";
 
 type Props = {
   params: Promise<{ locale: string }>;
