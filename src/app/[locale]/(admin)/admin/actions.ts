@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { BIBLE_TAG } from "@/lib/bible/data";
 import { createClient } from "@/lib/supabase/server";
 
 async function getAdminClient() {
@@ -29,6 +30,7 @@ export async function updateVerseText(verseId: string, text: string) {
     .update({ text })
     .eq("id", verseId);
   if (error) throw new Error(error.message);
+  updateTag(BIBLE_TAG);
   revalidatePath("/[locale]/(admin)/admin/bible", "page");
   revalidatePath("/[locale]/(admin)/admin/feedback", "page");
 }
@@ -50,6 +52,7 @@ export async function resolveFeedback(opts: {
       .update({ text: opts.applyText })
       .eq("id", opts.verseId);
     if (error) throw new Error(error.message);
+    updateTag(BIBLE_TAG);
   }
 
   const { error } = await supabase

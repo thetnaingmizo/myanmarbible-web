@@ -182,3 +182,36 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Reader themes (the app's quick presets, display_settings_state.dart).
+   "auto" follows the site's light/dark theme. */
+.reader {
+  --r-bg: var(--paper);
+  --r-ink: var(--ink);
+  --r-num: var(--verse-number);
+  --r-muted: var(--ink-3);
+  --r-line: var(--line);
+  background: var(--r-bg);
+  color: var(--r-ink);
+}
+.reader[data-theme="paper"] { --r-bg: #fbf8f3; --r-ink: #1f1815; --r-num: #a0634f; --r-muted: #7a6d64; --r-line: #e4dacd; }
+.reader[data-theme="sepia"] { --r-bg: #f4ecd8; --r-ink: #3b2a1a; --r-num: #9a6a3a; --r-muted: #7d6547; --r-line: #e0d2b3; }
+.reader[data-theme="night"] { --r-bg: #15110f; --r-ink: #f2eae2; --r-num: #d9a08c; --r-muted: #a0948a; --r-line: #3a2f2a; }
+.reader[data-theme="black"] { --r-bg: #000000; --r-ink: #ede6df; --r-num: #c9a27e; --r-muted: #9c9288; --r-line: #2a2522; }
+.reader[data-theme="contrast"] { --r-bg: #ffffff; --r-ink: #000000; --r-num: #7a1f1f; --r-muted: #3d3d3d; --r-line: #9a9a9a; }
+
+/* Myanmar digits have no superscript glyphs: sit smaller on the baseline,
+   as in printed Bibles (same as the app). Latin digits use superscripts. */
+.verse-num {
+  color: var(--r-num);
+  font-family: var(--font-figtree), var(--font-noto-myanmar), sans-serif;
+  font-weight: 700;
+  font-size: 0.72em;
+  margin-inline-end: 0.2em;
+  user-select: none;
+}
+.verse-num[data-latin] {
+  font-size: 0.62em;
+  vertical-align: super;
+  line-height: 0;
+}
