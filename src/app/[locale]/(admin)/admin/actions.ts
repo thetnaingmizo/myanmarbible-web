@@ -76,3 +76,29 @@ export async function resolveAiReport(opts: { reportId: string; status: "applied
   if (error) throw new Error(error.message);
   revalidatePath("/[locale]/(admin)/admin/ai-reports", "page");
 }
+
+type ReflectionFields = { title: string; body: string; reflect: string; prayer: string };
+
+/** Saves an editor's wording and approves (or withdraws) a daily reflection. */
+export async function reviewReflection(opts: { id: string; approve: boolean; fields?: ReflectionFields }) {
+  const { supabase, userId } = await getAdminClient();
+  const update: Record<string, unknown> = opts.approve
+    ? { reviewed_at: new Date().toISOString(), reviewed_by: userId }
+    : { reviewed_at: null, reviewed_by: null };
+  if (opts.fields) {
+    const { data: row, error: readError } = await supabase.from("daily_reflections").select("content").eq("id", opts.id).single();
+    if (readError) throw new Error(readError.message);
+    update.content = { ...(row.content as object), ...opts.fields };
+  }
+  const { error } = await supabase.from("daily_reflections").update(update).eq("id", opts.id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/[locale]/(admin)/admin/reflections", "page");
+}
+
+/** Deletes a reflection so scripts/generate-reflections.ts writes a new one. */
+export async function deleteReflection(id: string) {
+  const { supabase } = await getAdminClient();
+  const { error } = await supabase.from("daily_reflections").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/[locale]/(admin)/admin/reflections", "page");
+}

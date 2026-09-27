@@ -412,3 +412,7 @@ verify_jwt = false
 [functions.ai-chat]
 # Verifies the caller's JWT itself (guests included), like delete-account.
 verify_jwt = false
+
+[functions.ai-study]
+# Verifies the caller's JWT itself (guests included), like ai-chat.
+verify_jwt = false

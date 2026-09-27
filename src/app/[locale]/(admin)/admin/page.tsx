@@ -29,6 +29,10 @@ export default async function AdminDashboardPage({ params }: Props) {
     count("verse_feedback", { column: "status", value: "pending" }),
     count("ai_answer_reports", { column: "status", value: "pending" }),
   ]);
+  const { count: waitingReflections } = await supabase
+    .from("daily_reflections")
+    .select("*", { count: "exact", head: true })
+    .is("reviewed_at", null);
 
   // Today's AI spend against the global daily cap. "Today" is Myanmar time,
   // defined once in the database (ai_today) so it matches the quota.
@@ -59,6 +63,11 @@ export default async function AdminDashboardPage({ params }: Props) {
       description:
         "Reports from app and web users about missing or incorrect verses. Review, apply a corrected text, or reject.",
       href: `/${locale}/admin/feedback`,
+    },
+    {
+      title: "AI Reflections",
+      description: `Daily reflections under the Verse of the Day, drafted by AI. The app shows one only after it is approved. ${waitingReflections} waiting for review.`,
+      href: `/${locale}/admin/reflections`,
     },
     {
       title: "AI Answer Reports",

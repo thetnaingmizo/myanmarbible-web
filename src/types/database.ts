@@ -154,6 +154,45 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_verse_comparisons: {
+        Row: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at: string
+          id: string
+          lang: string
+          model: string
+          prompt_version: number
+          translations: string
+          verse_number: number
+        }
+        Insert: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at?: string
+          id?: string
+          lang: string
+          model: string
+          prompt_version: number
+          translations: string
+          verse_number: number
+        }
+        Update: {
+          book_number?: number
+          chapter_number?: number
+          content?: Json
+          created_at?: string
+          id?: string
+          lang?: string
+          model?: string
+          prompt_version?: number
+          translations?: string
+          verse_number?: number
+        }
+        Relationships: []
+      }
       ai_verse_explanations: {
         Row: {
           book_number: number
@@ -164,6 +203,7 @@ export type Database = {
           lang: string
           model: string
           prompt_version: number
+          style: string
           translation_id: string
           verse_end: number
           verse_start: number
@@ -177,6 +217,7 @@ export type Database = {
           lang: string
           model: string
           prompt_version: number
+          style?: string
           translation_id: string
           verse_end: number
           verse_start: number
@@ -190,6 +231,7 @@ export type Database = {
           lang?: string
           model?: string
           prompt_version?: number
+          style?: string
           translation_id?: string
           verse_end?: number
           verse_start?: number
@@ -449,6 +491,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_reflections: {
+        Row: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at: string
+          id: string
+          lang: string
+          model: string
+          prompt_version: number
+          reviewed_at: string | null
+          reviewed_by: string | null
+          verse_number: number
+        }
+        Insert: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at?: string
+          id?: string
+          lang: string
+          model: string
+          prompt_version: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          verse_number: number
+        }
+        Update: {
+          book_number?: number
+          chapter_number?: number
+          content?: Json
+          created_at?: string
+          id?: string
+          lang?: string
+          model?: string
+          prompt_version?: number
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          verse_number?: number
+        }
+        Relationships: []
       }
       faqs: {
         Row: {

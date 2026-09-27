@@ -46,3 +46,26 @@ Deno.test("crisis messages are caught in both languages, ordinary ones are not",
   assertEquals(isCrisis("What did Jesus say about dying to self?"), false);
   assertEquals(isCrisis("ဘုရားသခင်သည် ချစ်ခြင်းမေတ္တာ ဖြစ်သည်"), false);
 });
+
+Deno.test("differences keep only phrases found in the verse text", async () => {
+  const { validDifferences } = await import("./differ.ts");
+  const texts = { kjv: "For God so loved the world, that he gave his only begotten Son", bcl: "ဘုရားသခင်သည်လောကသားတို့ကို" };
+  const out = validDifferences(
+    [
+      { phrases: [{ code: "KJV", phrase: "The World" }, { code: "bcl", phrase: "လော​က​သား​တို့" }], note: "people vs world" },
+      { phrases: [{ code: "kjv", phrase: "only begotten" }, { code: "bcl", phrase: "made up" }], note: "one side only" },
+      { phrases: [{ code: "kjv", phrase: "loved" }, { code: "bcl", phrase: "ဘုရားသခင်" }], note: "" },
+    ],
+    texts,
+  );
+  assertEquals(out, [{ phrases: { kjv: "the world", bcl: "လောကသားတို့" }, note: "people vs world" }]);
+  assertEquals(validDifferences("nope", texts), []);
+});
+
+Deno.test("phrases match across stray spaces in Burmese sources", async () => {
+  const { locate } = await import("./differ.ts");
+  const text = "ကြံဆနားလည် ရန်မ စွမ်းနိုင်သော ဘုရားသခင်";
+  assertEquals(locate(text, "ရန်မစွမ်းနိုင်သော"), "ရန်မ စွမ်းနိုင်သော");
+  assertEquals(locate("For God so loved", "SO  LOVED"), "so loved");
+  assertEquals(locate(text, "မရှိ"), null);
+});
