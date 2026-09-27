@@ -34,8 +34,9 @@ export async function retrieveVerses(
   // 1. Generate embedding for the query
   const embeddingResult = await genai.models.embedContent({
     model: EMBEDDING_MODEL,
-    contents: query,
-    config: { outputDimensionality: EMBEDDING_DIMENSIONS },
+    contents: query.replace(/\u200B/g, ""),
+    // Verses are embedded as RETRIEVAL_DOCUMENT; queries must use RETRIEVAL_QUERY.
+    config: { outputDimensionality: EMBEDDING_DIMENSIONS, taskType: "RETRIEVAL_QUERY" },
   });
 
   const queryEmbedding = embeddingResult.embeddings?.[0]?.values;
@@ -52,6 +53,8 @@ export async function retrieveVerses(
       query_embedding: JSON.stringify(queryEmbedding),
       match_threshold: matchThreshold,
       match_count: fetchCount,
+      // Filter in the database (one translation) instead of after the fact.
+      filter_translation_id: translationId,
     }
   );
 

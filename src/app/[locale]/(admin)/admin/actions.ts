@@ -65,3 +65,14 @@ export async function resolveFeedback(opts: {
 
   revalidatePath("/[locale]/(admin)/admin/feedback", "page");
 }
+
+/** Marks a report on an AI answer as handled or dismissed. */
+export async function resolveAiReport(opts: { reportId: string; status: "applied" | "rejected"; adminNote?: string }) {
+  const { supabase } = await getAdminClient();
+  const { error } = await supabase
+    .from("ai_answer_reports")
+    .update({ status: opts.status, admin_note: opts.adminNote || null })
+    .eq("id", opts.reportId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/[locale]/(admin)/admin/ai-reports", "page");
+}

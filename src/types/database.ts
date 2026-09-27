@@ -34,6 +34,176 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_answer_reports: {
+        Row: {
+          admin_note: string | null
+          answer: string
+          cited: Json | null
+          comment: string | null
+          created_at: string
+          id: string
+          model: string | null
+          question: string
+          reason: string
+          status: Database["public"]["Enums"]["feedback_status"]
+          user_id: string | null
+        }
+        Insert: {
+          admin_note?: string | null
+          answer: string
+          cited?: Json | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          question: string
+          reason: string
+          status?: Database["public"]["Enums"]["feedback_status"]
+          user_id?: string | null
+        }
+        Update: {
+          admin_note?: string | null
+          answer?: string
+          cited?: Json | null
+          comment?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          question?: string
+          reason?: string
+          status?: Database["public"]["Enums"]["feedback_status"]
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_quota: {
+        Row: {
+          day: string
+          turns: number
+          user_id: string
+        }
+        Insert: {
+          day: string
+          turns?: number
+          user_id: string
+        }
+        Update: {
+          day?: string
+          turns?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_settings: {
+        Row: {
+          daily_cap_usd: number
+          enabled: boolean
+          id: boolean
+          turns_per_day_guest: number
+          turns_per_day_user: number
+          updated_at: string
+        }
+        Insert: {
+          daily_cap_usd?: number
+          enabled?: boolean
+          id?: boolean
+          turns_per_day_guest?: number
+          turns_per_day_user?: number
+          updated_at?: string
+        }
+        Update: {
+          daily_cap_usd?: number
+          enabled?: boolean
+          id?: boolean
+          turns_per_day_guest?: number
+          turns_per_day_user?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_usage: {
+        Row: {
+          cost_usd: number
+          created_at: string
+          id: number
+          input_tokens: number
+          kind: string
+          model: string
+          output_tokens: number
+          user_id: string | null
+        }
+        Insert: {
+          cost_usd?: number
+          created_at?: string
+          id?: never
+          input_tokens?: number
+          kind: string
+          model: string
+          output_tokens?: number
+          user_id?: string | null
+        }
+        Update: {
+          cost_usd?: number
+          created_at?: string
+          id?: never
+          input_tokens?: number
+          kind?: string
+          model?: string
+          output_tokens?: number
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      ai_verse_explanations: {
+        Row: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at: string
+          id: string
+          lang: string
+          model: string
+          prompt_version: number
+          translation_id: string
+          verse_end: number
+          verse_start: number
+        }
+        Insert: {
+          book_number: number
+          chapter_number: number
+          content: Json
+          created_at?: string
+          id?: string
+          lang: string
+          model: string
+          prompt_version: number
+          translation_id: string
+          verse_end: number
+          verse_start: number
+        }
+        Update: {
+          book_number?: number
+          chapter_number?: number
+          content?: Json
+          created_at?: string
+          id?: string
+          lang?: string
+          model?: string
+          prompt_version?: number
+          translation_id?: string
+          verse_end?: number
+          verse_start?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_verse_explanations_translation_id_fkey"
+            columns: ["translation_id"]
+            isOneToOne: false
+            referencedRelation: "translations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       blog_posts: {
         Row: {
           author_id: string | null
@@ -921,6 +1091,7 @@ export type Database = {
           created_at: string
           id: string
           text: string
+          text_norm: string | null
           text_search: unknown
           updated_at: string
           verse_number: number
@@ -931,6 +1102,7 @@ export type Database = {
           created_at?: string
           id?: string
           text: string
+          text_norm?: string | null
           text_search?: unknown
           updated_at?: string
           verse_number: number
@@ -941,6 +1113,7 @@ export type Database = {
           created_at?: string
           id?: string
           text?: string
+          text_norm?: string | null
           text_search?: unknown
           updated_at?: string
           verse_number?: number
@@ -960,8 +1133,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ai_quota_left: { Args: never; Returns: number }
+      ai_today: { Args: never; Returns: string }
+      consume_ai_quota: { Args: never; Returns: number }
       match_verses: {
         Args: {
+          filter_translation_id?: string
           match_count?: number
           match_threshold?: number
           query_embedding: string
@@ -970,6 +1147,20 @@ export type Database = {
           book_id: string
           chapter_number: number
           similarity: number
+          text: string
+          verse_id: string
+          verse_number: number
+        }[]
+      }
+      search_verses_text: {
+        Args: {
+          filter_translation_id?: string
+          match_count?: number
+          q: string
+        }
+        Returns: {
+          book_id: string
+          chapter_number: number
           text: string
           verse_id: string
           verse_number: number

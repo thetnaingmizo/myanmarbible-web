@@ -408,3 +408,7 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # The function verifies the caller's JWT itself (the gateway check rejects
 # tokens signed with the new asymmetric keys).
 verify_jwt = false
+
+[functions.ai-chat]
+# Verifies the caller's JWT itself (guests included), like delete-account.
+verify_jwt = false

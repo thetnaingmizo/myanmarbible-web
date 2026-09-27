@@ -13,7 +13,7 @@ export default async function AdminDashboardPage({ params }: Props) {
   const supabase = await createClient();
 
   async function count(
-    table: "profiles" | "verses" | "translations" | "verse_feedback",
+    table: "profiles" | "verses" | "translations" | "verse_feedback" | "ai_answer_reports",
     filter?: { column: string; value: string }
   ) {
     let q = supabase.from(table).select("*", { count: "exact", head: true });
@@ -22,12 +22,22 @@ export default async function AdminDashboardPage({ params }: Props) {
     return n ?? 0;
   }
 
-  const [users, verses, translations, pendingFeedback] = await Promise.all([
+  const [users, verses, translations, pendingFeedback, pendingAiReports] = await Promise.all([
     count("profiles"),
     count("verses"),
     count("translations"),
     count("verse_feedback", { column: "status", value: "pending" }),
+    count("ai_answer_reports", { column: "status", value: "pending" }),
   ]);
+
+  // Today's AI spend against the global daily cap. "Today" is Myanmar time,
+  // defined once in the database (ai_today) so it matches the quota.
+  const { data: today } = await supabase.rpc("ai_today");
+  const [{ data: usage }, { data: settings }] = await Promise.all([
+    supabase.from("ai_usage").select("cost_usd").gte("created_at", `${today}T00:00:00+06:30`),
+    supabase.from("ai_settings").select("daily_cap_usd").maybeSingle(),
+  ]);
+  const spentToday = (usage ?? []).reduce((sum, u) => sum + Number(u.cost_usd), 0);
 
   const stats = [
     { label: "Users", value: users },
@@ -35,6 +45,7 @@ export default async function AdminDashboardPage({ params }: Props) {
     { label: "Verses", value: verses },
     { label: "Pending feedback", value: pendingFeedback },
   ];
+  const aiLine = `$${spentToday.toFixed(2)} of $${Number(settings?.daily_cap_usd ?? 0).toFixed(2)} daily cap used today · ${pendingAiReports} report${pendingAiReports === 1 ? "" : "s"} pending`;
 
   const sections = [
     {
@@ -48,6 +59,11 @@ export default async function AdminDashboardPage({ params }: Props) {
       description:
         "Reports from app and web users about missing or incorrect verses. Review, apply a corrected text, or reject.",
       href: `/${locale}/admin/feedback`,
+    },
+    {
+      title: "AI Answer Reports",
+      description: `Answers from the Bible assistant flagged by users. ${aiLine}.`,
+      href: `/${locale}/admin/ai-reports`,
     },
   ];
 
