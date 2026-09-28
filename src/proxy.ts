@@ -7,7 +7,7 @@ import { localeOf, safeNext } from "./lib/auth/redirect";
 const intlMiddleware = createIntlMiddleware(routing);
 
 // Routes that require authentication (after locale prefix is stripped)
-const protectedPaths = ["/chat", "/profile", "/settings", "/verse-finder", "/trivia", "/bookmarks"];
+const protectedPaths = ["/profile", "/settings", "/trivia", "/bookmarks"];
 const adminPaths = ["/admin"];
 const authPaths = ["/login"];
 

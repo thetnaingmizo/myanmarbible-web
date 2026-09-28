@@ -2,7 +2,7 @@
 // Hubs mirror the app's tabs; "Learn" holds the web's study content.
 export const hubs = [
   { href: "/bible", key: "bible" },
-  { href: "/chat", key: "ask" },
+  { href: "/ask", key: "ask" },
   { href: "/bookmarks", key: "saved" },
 ] as const;
 
@@ -13,7 +13,6 @@ export const learnLinks = [
   { href: "/blog", key: "blog" },
   { href: "/podcast", key: "podcast" },
   { href: "/trivia", key: "trivia" },
-  { href: "/verse-finder", key: "verseFinder" },
 ] as const;
 
 export function isActive(pathname: string, href: string) {

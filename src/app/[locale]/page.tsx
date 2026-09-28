@@ -109,7 +109,7 @@ function HomeContent() {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline">
-                <Link href="/chat">
+                <Link href="/ask">
                   <MessageCircle aria-hidden />
                   {t("startChat")}
                 </Link>

@@ -92,3 +92,33 @@ export async function wordOccurrences(strong: string): Promise<number | null> {
   const first = data[0] as { total?: number } | undefined;
   return first?.total ?? data.length;
 }
+
+export type VerseRef = { book: number; chapter: number; verse: number };
+export type RefText = VerseRef & { bookId: string; label: string; text: string };
+
+/** Text of verse references in one Bible (topic results, cited verses). */
+export async function versesForRefs(bibleId: string, refs: VerseRef[]): Promise<RefText[]> {
+  const [bibles, books] = await Promise.all([getBibles(), getAllBooks()]);
+  const bible = bibles.find((b) => b.id === bibleId);
+  if (!bible) return [];
+  const burmese = bible.language === "my";
+  const out: RefText[] = [];
+  for (const r of refs.slice(0, 40)) {
+    const book = books.find((b) => b.translation_id === bibleId && b.book_number === r.book);
+    if (!book) continue;
+    const verses = await getChapter(book.id, r.chapter);
+    let v = verses.find((x) => x.verse_number === r.verse);
+    if (v && !v.text.trim()) v = [...verses].reverse().find((x) => x.verse_number < r.verse && x.text.trim());
+    if (!v) continue;
+    const name = (burmese && book.name_my ? book.name_my : book.name_en).replace(/​/g, "");
+    const shortName = burmese ? name.replace(/^ရှင်(?=.{3})/, "").replace(/(?<=.{3})ကျမ်း$/, "") : name;
+    const cv = `${r.chapter}:${r.verse}`;
+    out.push({
+      ...r,
+      bookId: book.id,
+      label: `${shortName} ${burmese ? cv.replace(/[0-9]/g, (d) => "၀၁၂၃၄၅၆၇၈၉"[Number(d)]) : cv}`,
+      text: v.text,
+    });
+  }
+  return out;
+}

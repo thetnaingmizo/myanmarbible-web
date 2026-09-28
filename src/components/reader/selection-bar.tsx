@@ -158,7 +158,7 @@ export function SelectionBar({ picked, reference, onClear, onAction, bookmarked,
         {tool(s("explain"), Sparkles, () => onAction("explain"), { ai: true })}
         {tool(s("original"), Languages, () => onAction("original"))}
         {tool(s("compare"), Columns3, () => onAction("compare"))}
-        {tool(s("ask"), MessageCircleQuestion, () => router.push(`/chat?about=${encodeURIComponent(reference)}`), { ai: true })}
+        {tool(s("ask"), MessageCircleQuestion, () => router.push(`/ask?about=${encodeURIComponent(reference)}`), { ai: true })}
         <span className="mx-1 w-px shrink-0 self-stretch bg-hairline" aria-hidden />
         {signedIn
           ? tool(allSaved ? t("saved") : t("save"), Bookmark, save, { active: allSaved })

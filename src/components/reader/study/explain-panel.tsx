@@ -147,7 +147,7 @@ export function ExplainPanel({ ctx }: { ctx: StudyContext }) {
       {state.result?.remaining != null && <p className="text-xs text-ink-3">{t("remaining", { count: num(state.result.remaining, ctx.locale === "my") })}</p>}
       <p className="text-xs text-ink-3">{t("usesOne")}</p>
       <Disclaimer />
-      <Link href={`/chat?about=${encodeURIComponent(ctx.reference)}`} className="inline-flex h-10 items-center rounded-full border border-line px-5 text-sm font-semibold text-ink hover:bg-sunk">
+      <Link href={`/ask?about=${encodeURIComponent(ctx.reference)}`} className="inline-flex h-10 items-center rounded-full border border-line px-5 text-sm font-semibold text-ink hover:bg-sunk">
         {t("askMore")}
       </Link>
     </div>
