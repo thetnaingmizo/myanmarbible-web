@@ -24,6 +24,9 @@ AI-powered bilingual (Myanmar/English) Bible study web application.
 
 ## Getting Started
 
+For credential-free cloud preparation, verification scripts, and the development
+backend decision, see [Codex Cloud setup](docs/codex-cloud.md).
+
 ### Prerequisites
 
 - Node.js 20+
